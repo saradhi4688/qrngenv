@@ -1,0 +1,8 @@
+Flask
+flask-cors
+numpy
+qiskit
+qiskit-aer
+requests
+gunicorn
+python-dotenv
