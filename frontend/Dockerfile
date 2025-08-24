@@ -1,7 +1,9 @@
-FROM nginx:stable-alpine
+# frontend/Dockerfile
 
-# Copy HTML, CSS, JS into nginx web root
-COPY . /usr/share/nginx/html
+FROM nginx:alpine
+
+# Copy frontend files to nginx default dir
+COPY frontend/ /usr/share/nginx/html
 
 EXPOSE 80
 
