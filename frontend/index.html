@@ -1,470 +1,494 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Quantum Random Number Generator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quantum RNG v2.0 Alpha</title>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        quantum: {
-                            primary: '#6366f1',
-                            secondary: '#10b981',
-                            accent: '#f59e0b',
-                            dark: '#1f2937',
-                            darker: '#111827'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+  <!-- Tailwind + Chart.js + GSAP -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            quantum: { primary: '#6366f1', green: '#10b981', purple: '#a855f7' }
+          }
+        }
+      }
+    }
+  </script>
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg,#111827 0%,#1f2937 100%);
-            min-height: 100vh; color: #f3f4f6; position: relative; overflow-x: hidden;
-        }
-        .glass-card {
-            background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.04); border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg,#6366f1,#4f46e5); box-shadow: 0 4px 15px rgba(99,102,241,0.22);
-            border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 10px; font-size: 1rem;
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.35); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.04);
-            color: white; padding: 0.75rem 1.25rem; border-radius: 10px;
-        }
-        .result-container { max-height: 300px; overflow-y:auto; background: rgba(0,0,0,0.18);
-            border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 1rem; margin-top: 1rem;
-            font-family: 'Monaco','Consolas',monospace; font-size:0.9rem; line-height:1.6;
-        }
-        .source-badge { padding:0.25rem 0.75rem; border-radius:20px; font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
-        .source-anu { background: linear-gradient(135deg,#10b981,#059669); color: white; }
-        .source-simulator { background: linear-gradient(135deg,#f59e0b,#d97706); color: white; }
-        .stat-card { transition: all .25s ease; }
-        .stat-card:hover { transform: translateY(-6px); box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
-        .particle { position:absolute; width:6px; height:6px; background: rgba(99,102,241,0.8); border-radius:50%; animation: float 4s infinite ease-in-out; }
-        @keyframes float { 0% { transform: translateY(0) translateX(0);} 50% { transform: translateY(-20px) translateX(10px);} 100% { transform: translateY(0) translateX(0);} }
-        .result-container::-webkit-scrollbar { width: 6px; }
-        .result-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius:3px; }
-        .result-container::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.45); border-radius:3px; }
-        .toast { position: fixed; top: 1rem; right: 1rem; z-index: 9999; padding:.6rem 1rem; border-radius:8px; color:white; box-shadow:0 8px 20px rgba(0,0,0,0.4); }
-        .toast.info { background: rgba(59,130,246,0.95); } .toast.error { background: rgba(239,68,68,0.95); } .toast.success { background: rgba(16,185,129,0.95); }
-    </style>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg,#111827 0%,#1f2937 100%);
+      min-height: 100vh; color: #f3f4f6; transition: background .4s, color .4s;
+    }
+    .glass-card {
+      background: rgba(255,255,255,0.06); backdrop-filter: blur(8px);
+      border-radius: 14px; border:1px solid rgba(255,255,255,0.04);
+      box-shadow: 0 6px 26px rgba(0,0,0,0.3);
+    }
+    .btn-primary { background: linear-gradient(135deg,#6366f1,#4f46e5); color: #fff; padding: .6rem 1rem; border-radius: 10px; font-weight:600; }
+    .btn-secondary { background: rgba(255,255,255,0.04); color: #fff; padding: .45rem .75rem; border-radius: 10px; }
+    .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%); background-size: 400% 100%; animation: shimmer 1.2s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0%{background-position:-400px 0;}100%{background-position:400px 0;} }
+    .particle { position: absolute; width:6px; height:6px; background: rgba(99,102,241,0.75); border-radius:50%; animation: float 4s infinite ease-in-out; pointer-events: none; }
+    @keyframes float { 0%{transform: translateY(0)}50%{transform: translateY(-18px)}100%{transform: translateY(0)} }
+    .toast { position: fixed; top: 1rem; right: 1rem; z-index: 9999; padding:.6rem 1rem; border-radius:8px; color:white; box-shadow:0 8px 20px rgba(0,0,0,0.35); }
+    .toast.info { background: rgba(59,130,246,0.95); } .toast.success { background: rgba(16,185,129,0.95); } .toast.error { background: rgba(239,68,68,0.95); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid rgba(255,255,255,0.04); padding: 6px 8px; text-align:center; }
+  </style>
 </head>
-<body>
-    <div class="min-h-screen gradient-bg">
-        <div class="container mx-auto px-4 py-8">
-            <header class="text-center mb-12">
-                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-4 quantum-pulse">Quantum RNG</h1>
-                <p class="text-gray-300 text-lg max-w-2xl mx-auto">Generate truly random numbers using quantum mechanics. ANU quantum source with Qiskit fallback.</p>
-            </header>
 
-            <div class="max-w-4xl mx-auto">
-                <div class="glass-card p-6 mb-8">
-                    <h2 class="text-2xl font-semibold mb-6 text-blue-300">Generate Random Numbers</h2>
+<body class="transition-colors duration-300">
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label class="block text-gray-300 mb-2 text-sm font-medium">Number of Bits</label>
-                            <select id="numBits" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                                <option value="4">4 bits (0-15)</option>
-                                <option value="8" selected>8 bits (0-255)</option>
-                                <option value="12">12 bits (0-4095)</option>
-                                <option value="16">16 bits (0-65535)</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-300 mb-2 text-sm font-medium">Quantity</label>
-                            <input type="number" id="numSamples" value="10" min="1" max="5000"
-                                class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                        </div>
-                    </div>
-
-                    <button id="generateBtn" class="w-full btn-primary py-3 px-6 rounded-xl font-semibold text-lg transition-all duration-300">
-                        <span class="flex items-center justify-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
-                            Generate Quantum Numbers
-                        </span>
-                    </button>
-                </div>
-
-                <div class="glass-card p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-semibold text-green-300">Results</h2>
-                        <div id="sourceIndicator" class="source-badge source-anu opacity-0 transition-opacity duration-300">ANU Quantum Source</div>
-                    </div>
-
-                    <div class="result-container mb-6">
-                        <div id="resultDisplay" class="text-gray-300">
-                            <div class="text-center py-8 text-gray-400">
-                                <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                                <p>Ready to generate quantum random numbers</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="stat-card glass-card p-4 text-center">
-                            <div class="text-xl font-bold text-blue-300" id="meanValue">0.00</div>
-                            <div class="text-xs text-gray-400 mt-1">Mean</div>
-                        </div>
-                        <div class="stat-card glass-card p-4 text-center">
-                            <div class="text-xl font-bold text-green-300" id="stdValue">0.00</div>
-                            <div class="text-xs text-gray-400 mt-1">Std Dev</div>
-                        </div>
-                        <div class="stat-card glass-card p-4 text-center">
-                            <div class="text-xl font-bold text-yellow-300" id="minValue">0</div>
-                            <div class="text-xs text-gray-400 mt-1">Minimum</div>
-                        </div>
-                        <div class="stat-card glass-card p-4 text-center">
-                            <div class="text-xl font-bold text-red-300" id="maxValue">0</div>
-                            <div class="text-xs text-gray-400 mt-1">Maximum</div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button id="copyBtn" class="w-full btn-secondary py-3 px-6 rounded-xl font-semibold transition-all duration-300">
-                            <span class="flex items-center justify-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Copy Results
-                            </span>
-                        </button>
-                        <button id="downloadJson" class="w-full btn-secondary py-3 px-6 rounded-xl font-semibold transition-all duration-300">Download JSON</button>
-                        <button id="downloadCsv" class="w-full btn-secondary py-3 px-6 rounded-xl font-semibold transition-all duration-300">Download CSV</button>
-                    </div>
-                </div>
-
-                <div class="glass-card p-6 mb-8">
-                    <h2 class="text-2xl font-semibold mb-6 text-blue-300">Distribution Graph</h2>
-                    <div style="height:400px;">
-                        <canvas id="distributionChart" height="400"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <footer class="text-center mt-12 text-gray-400 text-sm">
-                <p>Powered by ANU Quantum Random Number Generator with Qiskit fallback</p>
-            </footer>
-        </div>
-
-        <!-- Particle Animation -->
-        <div class="fixed inset-0 pointer-events-none">
-            <div class="particle" style="top: 20%; left: 10%; animation-delay: 0s;"></div>
-            <div class="particle" style="top: 60%; left: 20%; animation-delay: 0.5s;"></div>
-            <div class="particle" style="top: 30%; left: 80%; animation-delay: 1s;"></div>
-            <div class="particle" style="top: 70%; left: 90%; animation-delay: 1.5s;"></div>
-            <div class="particle" style="top: 50%; left: 50%; animation-delay: 2s;"></div>
-            <div class="particle" style="top: 10%; left: 30%; animation-delay: 2.5s;"></div>
-            <div class="particle" style="top: 80%; left: 40%; animation-delay: 3s;"></div>
-            <div class="particle" style="top: 40%; left: 70%; animation-delay: 3.5s;"></div>
-        </div>
+  <!-- Navbar -->
+  <nav class="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur z-50 px-6 py-3 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <h1 class="text-lg font-bold text-blue-300">⚛ Quantum RNG</h1>
+      <span class="text-sm text-gray-300">v2.0-alpha</span>
     </div>
 
-    <script>
-        /* =========================
-           Config & small utilities
-           ========================= */
-        const API_BASE_URL = 'https://qrngenvbackend.onrender.com/';
-        const MAX_SAMPLES = 5000;
-        const MAX_BITS = 16;    // safe maximum for full rendering; bucket when too large
-        const BUCKET_THRESHOLD_BITS = 12; // >12 will use bucketed histogram automatically
-        let distributionChart = null;
-        let lastResponse = null;
+    <div class="flex items-center gap-3">
+      <button id="themeToggle" class="px-3 py-1 rounded-lg bg-gray-700 text-sm">🌗</button>
+      <select id="accentPicker" class="bg-gray-700 text-sm rounded-lg px-2 py-1 text-gray-200">
+        <option value="blue">Blue</option>
+        <option value="green">Green</option>
+        <option value="purple">Purple</option>
+      </select>
+      <button id="pingBtn" class="btn-secondary">Ping</button>
+    </div>
+  </nav>
 
-        const el = (id) => document.getElementById(id);
+  <main class="pt-20 container mx-auto px-4 pb-12 space-y-6">
 
-        function showToast(message, type = 'info', duration = 3000) {
-            const t = document.createElement('div');
-            t.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
-            t.textContent = message;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), duration);
-        }
+    <!-- Onboarding (first-visit) -->
+    <div id="onboarding" class="glass-card p-3 text-sm text-center hidden">👋 Welcome! Select bits & samples then click <strong class="text-blue-300">Generate</strong>.</div>
 
-        /* =========================
-           Backend call
-           ========================= */
-        async function generateRandomNumbers(numBits, numSamples) {
-            const payload = { num_bits: parseInt(numBits, 10), num_samples: parseInt(numSamples, 10) };
-            try {
-                const res = await fetch(`${API_BASE_URL}/generate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) {
-                    const txt = await res.text().catch(()=>res.statusText);
-                    throw new Error(`Server error ${res.status}: ${txt}`);
-                }
-                return await res.json();
-            } catch (err) {
-                console.error('generateRandomNumbers error:', err);
-                throw err;
-            }
-        }
+    <!-- Controls -->
+    <section class="glass-card p-6 max-w-4xl mx-auto">
+      <h2 class="text-xl font-semibold text-blue-300 mb-4">Generate Random Numbers</h2>
 
-        /* =========================
-           Formatting & UI updates
-           ========================= */
-        function formatNumber(number, numBits) {
-            const n = Number(number);
-            const maxValue = Math.pow(2, numBits) - 1;
-            const width = maxValue.toString().length;
-            return String(n).padStart(width, '0');
-        }
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <div>
+          <label class="text-sm text-gray-300 block mb-1">Number of Bits</label>
+          <select id="numBits" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white">
+            <option value="4">4 bits (0-15)</option>
+            <option value="8" selected>8 bits (0-255)</option>
+            <option value="12">12 bits (0-4095)</option>
+            <option value="16">16 bits (0-65535)</option>
+          </select>
+        </div>
 
-        function updateStatistics(stats = {}) {
-            const mean = typeof stats.mean === 'number' ? stats.mean : (stats.mean ? Number(stats.mean) : 0);
-            const std = typeof stats.std === 'number' ? stats.std : (stats.std ? Number(stats.std) : 0);
-            el('meanValue') && (el('meanValue').textContent = mean.toFixed(2));
-            el('stdValue') && (el('stdValue').textContent = std.toFixed(2));
-            el('minValue') && (el('minValue').textContent = String(stats.min ?? 0));
-            el('maxValue') && (el('maxValue').textContent = String(stats.max ?? 0));
-        }
+        <div>
+          <label class="text-sm text-gray-300 block mb-1">Quantity</label>
+          <input id="numSamples" type="number" value="16" min="1" max="5000" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white" />
+        </div>
 
-        function updateSourceIndicator(source) {
-            const indicator = el('sourceIndicator');
-            if (!indicator) return;
-            indicator.textContent = source === 'ANU' ? 'ANU Quantum Source' : 'Qiskit Simulator';
-            indicator.className = `source-badge ${source === 'ANU' ? 'source-anu' : 'source-simulator'} transition-opacity duration-300`;
-            indicator.style.opacity = '1';
-        }
+        <div class="flex gap-2">
+          <button id="generateBtn" class="btn-primary flex-1">🔮 Generate</button>
+          <button id="copyBtn" class="btn-secondary">Copy</button>
+          <button id="downloadJson" class="btn-secondary">JSON</button>
+          <button id="downloadCsv" class="btn-secondary">CSV</button>
+        </div>
+      </div>
 
-        /* =========================
-           Chart rendering (bucketed if needed)
-           ========================= */
-        function renderDistributionGraph(numbers = [], numBits) {
-            const bits = parseInt(numBits, 10);
-            const maxValue = (1 << bits) - 1;
-            const nums = numbers.map(x => Number(x)).filter(x => Number.isFinite(x));
+      <p id="errorBox" class="text-red-400 mt-3 text-sm"></p>
+    </section>
 
-            let labels = [];
-            let counts = [];
+    <!-- Results -->
+    <section class="glass-card p-6 max-w-4xl mx-auto">
+      <div class="flex justify-between items-start">
+        <h2 class="text-xl font-semibold text-green-300">Results</h2>
+        <div id="sourceIndicator" class="source-badge source-anu opacity-0 transition-opacity duration-300">ANU Quantum Source</div>
+      </div>
 
-            if (bits <= BUCKET_THRESHOLD_BITS && maxValue <= 4096) {
-                // full frequency array
-                counts = new Array(maxValue + 1).fill(0);
-                nums.forEach(n => { if (n >= 0 && n <= maxValue) counts[n]++; });
-                labels = counts.map((_, i) => String(i));
-            } else {
-                // bucketed histogram (256 buckets)
-                const BUCKETS = 256;
-                counts = new Array(BUCKETS).fill(0);
-                nums.forEach(n => {
-                    if (n < 0 || n > maxValue || !Number.isFinite(n)) return;
-                    const idx = Math.floor((n / maxValue) * (BUCKETS - 1));
-                    counts[Math.max(0, Math.min(BUCKETS - 1, idx))]++;
-                });
-                labels = counts.map((_, i) => {
-                    const from = Math.round((i / BUCKETS) * maxValue);
-                    const to = Math.round(((i + 1) / BUCKETS) * maxValue);
-                    return `${from}–${to}`;
-                });
-            }
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-3 bg-gray-900/30 rounded-lg text-center">
+          <div class="text-lg font-bold" id="meanValue">—</div>
+          <div class="text-xs text-gray-400">Mean</div>
+        </div>
+        <div class="p-3 bg-gray-900/30 rounded-lg text-center">
+          <div class="text-lg font-bold" id="stdValue">—</div>
+          <div class="text-xs text-gray-400">Std Dev</div>
+        </div>
+        <div class="p-3 bg-gray-900/30 rounded-lg text-center">
+          <div class="text-lg font-bold" id="minValue">—</div>
+          <div class="text-xs text-gray-400">Minimum</div>
+        </div>
+        <div class="p-3 bg-gray-900/30 rounded-lg text-center">
+          <div class="text-lg font-bold" id="maxValue">—</div>
+          <div class="text-xs text-gray-400">Maximum</div>
+        </div>
+      </div>
 
-            // destroy previous chart if exists
-            try { if (distributionChart) { distributionChart.destroy(); distributionChart = null; } } catch (e) { console.warn(e); }
+      <div class="mt-4 flex gap-6 items-center text-sm text-gray-300">
+        <div>Entropy: <span id="entropyValue">—</span></div>
+        <div>Version: <span id="metaVersion">—</span></div>
+        <div>Timestamp: <span id="metaTime">—</span></div>
+      </div>
 
-            const canvas = el('distributionChart');
-            if (!canvas) return;
+      <div class="result-container mt-6" id="resultDisplay">
+        <div class="text-center py-8 text-gray-400">
+          <p>Ready to generate quantum random numbers</p>
+        </div>
+      </div>
+    </section>
 
-            const ctx = canvas.getContext('2d');
-            distributionChart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels, datasets: [{ label: 'Frequency', data: counts }] },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        x: { ticks: { autoSkip: true, maxTicksLimit: 20 }, grid: { color: 'rgba(255,255,255,0.04)' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.04)' } }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {}
-                    },
-                    animation: { duration: 600 }
-                }
-            });
-        }
+    <!-- Chart -->
+    <section class="glass-card p-6 max-w-4xl mx-auto">
+      <h2 class="text-xl font-semibold text-blue-300">Distribution Graph</h2>
+      <div style="height:360px;" class="mt-4">
+        <canvas id="distributionChart" height="360"></canvas>
+      </div>
+    </section>
 
-        /* =========================
-           Table / result display
-           ========================= */
-        function renderResults(numbers = [], numBits) {
-            const container = el('resultDisplay');
-            if (!container) return;
-            if (!Array.isArray(numbers) || numbers.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-400">No data returned.</div>`;
-                return;
-            }
+    <!-- Table -->
+    <section class="glass-card p-6 max-w-4xl mx-auto">
+      <h2 class="text-xl font-semibold text-blue-300">Generated Numbers (table)</h2>
+      <div class="overflow-auto mt-4">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-800/40">
+            <tr><th class="p-2">#</th><th class="p-2">Decimal</th><th class="p-2">Binary</th></tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-gray-800/30"></tbody>
+        </table>
+      </div>
+    </section>
 
-            // Build compact lines with index, decimal, binary
-            const lines = numbers.map((n, i) => {
-                const dec = Number(n);
-                const bin = dec.toString(2).padStart(parseInt(numBits, 10), '0');
-                return `<div class="flex justify-between py-1"><span class="text-gray-400">${i+1}.</span><span class="text-blue-300">${String(dec)}</span><span class="text-green-300 font-mono">${bin}</span></div>`;
-            });
+  </main>
 
-            container.innerHTML = `<div>${lines.join('')}</div>`;
-        }
+  <!-- Particles container -->
+  <div class="fixed inset-0 pointer-events-none"></div>
 
-        /* =========================
-           Downloads & clipboard
-           ========================= */
-        function download(filename, text) {
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename; document.body.appendChild(a);
-            a.click(); a.remove(); URL.revokeObjectURL(url);
-        }
+  <!-- Frontend JS: synced & robust -->
+  <script>
+/* ========== CONFIG ========== */
+/* Change this to your backend host if needed (e.g. 'http://localhost:5000') */
+const API_BASE_URL = 'http://localhost:5000'; // <- change to your running backend if different
 
-        /* =========================
-           Event wiring & main flow
-           ========================= */
-        function safeGetVal(id, fallback = '') { const eln = el(id); return eln ? eln.value : fallback; }
+let distributionChart = null;
+let lastResponse = null;
 
-        function initUI() {
-            const genBtn = el('generateBtn');
-            if (genBtn) {
-                genBtn.addEventListener('click', async () => {
-                    const numBits = safeGetVal('numBits', '8');
-                    const numSamples = parseInt(safeGetVal('numSamples', '10'), 10);
+const MAX_SAMPLES = 5000;
+const MAX_BITS = 16;
+const BUCKET_THRESHOLD_BITS = 12;
 
-                    // validate
-                    if (isNaN(numSamples) || numSamples < 1 || numSamples > MAX_SAMPLES) {
-                        showToast(`Quantity must be between 1 and ${MAX_SAMPLES}.`, 'error');
-                        return;
-                    }
-                    const bits = parseInt(numBits, 10);
-                    if (![4,8,12,16].includes(bits) || bits < 1 || bits > MAX_BITS) {
-                        showToast(`Invalid number of bits selected.`, 'error');
-                        return;
-                    }
+const el = id => document.getElementById(id);
 
-                    // show loading state
-                    genBtn.disabled = true;
-                    const oldHTML = genBtn.innerHTML;
-                    genBtn.innerHTML = `<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>Quantum Processing...</span>`;
+function showToast(msg, type='info', ms=3000){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type==='error' ? 'error' : type==='success' ? 'success' : 'info');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=> t.remove(), ms);
+}
 
-                    try {
-                        const start = performance.now();
-                        const data = await generateRandomNumbers(bits, numSamples);
-                        const end = performance.now();
+/* ========== BACKEND CALLS ========== */
+async function generateRandomNumbers(numBits, numSamples){
+  const payload = { num_bits: parseInt(numBits,10), num_samples: parseInt(numSamples,10) };
+  const res = await fetch(`${API_BASE_URL}/generate`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  if(!res.ok){
+    const txt = await res.text().catch(()=>res.statusText);
+    throw new Error(`Server ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
 
-                        lastResponse = data;
+async function fetchHealth(){
+  const res = await fetch(`${API_BASE_URL}/health`);
+  if(!res.ok) throw new Error(`Health ${res.status}`);
+  return res.json();
+}
 
-                        // normalize numbers
-                        const numbers = (data.numbers || []).map(x => Number(x));
-                        // update UI
-                        renderResults(numbers, bits);
-                        updateStatistics(data.statistics || {});
-                        updateSourceIndicator(data.source || 'ANU');
-                        renderDistributionGraph(numbers, bits);
+async function fetchExportJson(){
+  const res = await fetch(`${API_BASE_URL}/export/json`);
+  if(!res.ok){ const t = await res.text().catch(()=>res.statusText); throw new Error(`Export JSON failed ${res.status}: ${t}`); }
+  return res.blob();
+}
 
-                        showToast(`Generation completed in ${Math.round(end-start)}ms using ${data.source || 'ANU'}`, 'success', 1800);
-                    } catch (err) {
-                        console.error(err);
-                        showToast(err.message || 'Generation failed', 'error', 4000);
-                    } finally {
-                        genBtn.disabled = false;
-                        genBtn.innerHTML = oldHTML;
-                    }
-                });
-            }
+async function fetchExportCsv(){
+  const res = await fetch(`${API_BASE_URL}/export/csv`);
+  if(!res.ok){ const t = await res.text().catch(()=>res.statusText); throw new Error(`Export CSV failed ${res.status}: ${t}`); }
+  return res.blob();
+}
 
-            // copy
-            const copyBtn = el('copyBtn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', async () => {
-                    if (!lastResponse || !Array.isArray(lastResponse.numbers) || lastResponse.numbers.length === 0) {
-                        showToast('No results to copy', 'error');
-                        return;
-                    }
-                    const bits = parseInt(safeGetVal('numBits','8'),10);
-                    const text = lastResponse.numbers.map(n => formatNumber(Number(n), bits)).join('\n');
-                    try {
-                        await navigator.clipboard.writeText(text);
-                        showToast('Results copied to clipboard', 'success');
-                    } catch (e) {
-                        console.error(e);
-                        showToast('Failed to copy results', 'error');
-                    }
-                });
-            }
+/* ========== UI HELPERS ========== */
+function formatNumber(number, numBits){
+  const n = Number(number);
+  const maxValue = Math.pow(2, numBits)-1;
+  const width = maxValue.toString().length;
+  return String(n).padStart(width,'0');
+}
 
-            // download JSON
-            const djson = el('downloadJson');
-            if (djson) {
-                djson.addEventListener('click', () => {
-                    if (!lastResponse) { showToast('No data to download', 'error'); return; }
-                    download('qrng_response.json', JSON.stringify(lastResponse, null, 2));
-                });
-            }
+function updateStatistics(statsCandidate = {}){
+  // Accept multiple shapes (stats, statistics, top-level)
+  const s = statsCandidate ?? {};
+  const statsObj = s.statistics ?? s.stats ?? s;
 
-            // download CSV
-            const dcsv = el('downloadCsv');
-            if (dcsv) {
-                dcsv.addEventListener('click', () => {
-                    if (!lastResponse || !Array.isArray(lastResponse.numbers)) { showToast('No data to download', 'error'); return; }
-                    const bits = parseInt(safeGetVal('numBits','8'),10);
-                    const rows = ['index,decimal,binary'];
-                    lastResponse.numbers.forEach((n,i) => {
-                        const dec = Number(n);
-                        rows.push(`${i+1},${dec},${dec.toString(2).padStart(bits,'0')}`);
-                    });
-                    download('qrng_numbers.csv', rows.join('\n'));
-                });
-            }
+  const mean = Number(statsObj.mean ?? 0);
+  const std  = Number(statsObj.std  ?? 0);
+  const min  = statsObj.min ?? 0;
+  const max  = statsObj.max ?? 0;
 
-            // limit samples input
-            const ns = el('numSamples');
-            if (ns) {
-                ns.addEventListener('input', (e) => {
-                    let v = parseInt(e.target.value||'0',10);
-                    if (isNaN(v) || v < 1) e.target.value = 1;
-                    if (v > MAX_SAMPLES) e.target.value = MAX_SAMPLES;
-                });
-            }
-        }
+  if(el('meanValue')) el('meanValue').textContent = Number.isFinite(mean) ? mean.toFixed(2) : '—';
+  if(el('stdValue'))  el('stdValue').textContent  = Number.isFinite(std)  ? std.toFixed(2)  : '—';
+  if(el('minValue'))  el('minValue').textContent  = (min !== undefined && min !== null) ? String(min) : '—';
+  if(el('maxValue'))  el('maxValue').textContent  = (max !== undefined && max !== null) ? String(max) : '—';
+}
 
-        /* =========================
-           Small animations
-           ========================= */
-        document.addEventListener('DOMContentLoaded', () => {
-            initUI();
+function updateMetaFromResponse(data = {}){
+  const meta = data.meta ?? {};
+  const versionVal = data.version ?? meta.version ?? null;
+  const timestampVal = data.timestamp ?? meta.timestamp ?? null;
+  const sourceVal = data.source ?? meta.source ?? null;
+  const entropyVal = data.entropy ?? meta.entropy ?? data.stats?.entropy ?? data.statistics?.entropy ?? null;
 
-            try {
-                gsap.to('.quantum-pulse', { duration: 1.5, repeat: -1, yoyo: true, ease: 'power1.inOut', textShadow: '0 0 20px rgba(99, 102, 241, 0.8)' });
-                gsap.from('.stat-card', { duration: 1, y: 20, opacity: 0, stagger: 0.2, ease: 'power2.out' });
-            } catch (e) { /* GSAP fail-safe */ }
+  if(el('metaVersion')) el('metaVersion').textContent = versionVal ? String(versionVal) : '—';
+  if(el('metaTime')) el('metaTime').textContent = timestampVal ? String(timestampVal) : '—';
+  if(el('entropyValue')) {
+    el('entropyValue').textContent = (entropyVal !== null && entropyVal !== undefined) ? (Number(entropyVal).toFixed ? Number(entropyVal).toFixed(4) : String(entropyVal)) : '—';
+  }
+  if(sourceVal) updateSourceIndicator(sourceVal);
+}
 
-            console.log('Quantum RNG Interface Loaded');
-        });
-    </script>
+function updateSourceIndicator(source){
+  const indicator = el('sourceIndicator');
+  if(!indicator) return;
+  indicator.textContent = source === 'ANU' ? 'ANU Quantum Source' : 'Qiskit Simulator';
+  indicator.className = `source-badge ${source === 'ANU' ? 'source-anu' : 'source-simulator'} transition-opacity duration-300`;
+  indicator.style.opacity = '1';
+}
+
+/* ========== CHARTING & TABLE ========== */
+function renderDistributionGraph(numbers=[], numBits){
+  const canvas = el('distributionChart');
+  if(!canvas) return;
+  const bits = parseInt(numBits,10);
+  if(isNaN(bits) || bits < 1) return;
+
+  const nums = (numbers||[]).map(x=>Number(x)).filter(x => Number.isFinite(x));
+  const maxValue = (1<<bits)-1;
+  let labels = [], counts = [];
+
+  if(bits <= BUCKET_THRESHOLD_BITS && maxValue <= 4096){
+    counts = new Array(maxValue+1).fill(0);
+    nums.forEach(n => { if(n>=0 && n<=maxValue) counts[n]++; });
+    labels = counts.map((_,i) => String(i));
+  } else {
+    const BUCKETS = 256;
+    counts = new Array(BUCKETS).fill(0);
+    nums.forEach(n => {
+      if(n<0 || n>maxValue || !Number.isFinite(n)) return;
+      const idx = Math.floor((n/maxValue)*(BUCKETS-1));
+      counts[Math.max(0, Math.min(BUCKETS-1, idx))]++;
+    });
+    labels = counts.map((_,i) => {
+      const from = Math.round((i/BUCKETS)*maxValue);
+      const to = Math.round(((i+1)/BUCKETS)*maxValue);
+      return `${from}–${to}`;
+    });
+  }
+
+  try{ if(distributionChart) distributionChart.destroy(); } catch(e){ console.warn(e); }
+  const ctx = canvas.getContext('2d');
+  distributionChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets:[{ label:'Frequency', data:counts, backgroundColor:'rgba(99,102,241,0.6)' }] },
+    options: { responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{ autoSkip:true, maxTicksLimit:20 } }, y: {} }, plugins:{ legend:{ display:false } }, animation:{ duration:600 } }
+  });
+}
+
+function renderTable(numbers=[], numBits){
+  const tbody = el('tableBody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  (numbers || []).forEach((n,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="p-2">${i+1}</td><td class="p-2">${n}</td><td class="p-2">${Number(n).toString(2).padStart(numBits,'0')}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ========== DOWNLOAD & COPY ========== */
+function downloadBlob(blob, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+async function initDownloadJson(){
+  const btn = el('downloadJson'); if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    try{
+      const blob = await fetchExportJson();
+      downloadBlob(blob, 'qrng_export.json');
+      showToast('JSON downloaded','success');
+    } catch(e){ console.error(e); showToast(e.message || 'Export failed','error'); }
+  });
+}
+
+async function initDownloadCsv(){
+  const btn = el('downloadCsv'); if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    try{
+      const blob = await fetchExportCsv();
+      downloadBlob(blob, 'qrng_export.csv');
+      showToast('CSV downloaded','success');
+    } catch(e){ console.error(e); showToast(e.message || 'Export failed','error'); }
+  });
+}
+
+function initCopyBtn(){
+  const btn = el('copyBtn'); if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    if(!lastResponse?.numbers?.length) { showToast('No results to copy','error'); return; }
+    try {
+      const bits = parseInt(el('numBits')?.value || '8',10);
+      const text = lastResponse.numbers.map(n => formatNumber(Number(n), bits)).join('\n');
+      await navigator.clipboard.writeText(text);
+      showToast('Copied to clipboard','success');
+    } catch(e){ console.error(e); showToast('Copy failed','error'); }
+  });
+}
+
+/* ========== HEALTH / PING ========== */
+function initPingBtn(){
+  const btn = el('pingBtn'); if(!btn) return;
+  btn.addEventListener('click', async ()=>{
+    try {
+      const info = await fetchHealth();
+      showToast(`Server OK — ANU: ${info.anu ? 'UP' : 'DOWN'}`, 'success', 2500);
+    } catch(e) { console.error(e); showToast('Server not reachable','error',2500); }
+  });
+}
+
+/* ========== THEME & ACCENT ========== */
+function initThemeToggle(){
+  const btn = el('themeToggle'); if(!btn) return;
+  btn.addEventListener('click', ()=> { document.documentElement.classList.toggle('dark'); });
+}
+
+function initAccentPicker(){
+  const picker = el('accentPicker'); if(!picker) return;
+  picker.addEventListener('change', ev => {
+    const color = ev.target.value;
+    document.querySelectorAll('.text-blue-300, .text-green-300, .text-purple-300').forEach(node => {
+      node.classList.remove('text-blue-300','text-green-300','text-purple-300');
+      node.classList.add(`text-${color}-300`);
+    });
+  });
+}
+
+/* ========== SKELETON & GENERATE HANDLER ========== */
+function showSkeletons(){
+  const rd = el('resultDisplay'); if(rd) rd.innerHTML = '<div class="skeleton h-28 rounded-md"></div>';
+  const canvas = el('distributionChart');
+  if(canvas){
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+function initGenerateHandler(){
+  const genBtn = el('generateBtn'); if(!genBtn) return;
+  genBtn.addEventListener('click', async ()=>{
+    const numBitsEl = el('numBits'); const numSamplesEl = el('numSamples');
+    if(!numBitsEl || !numSamplesEl) { showToast('Missing inputs','error'); return; }
+
+    let bits = parseInt(numBitsEl.value,10); let samples = parseInt(numSamplesEl.value,10);
+    if(isNaN(bits) || isNaN(samples)) { showToast('Enter valid numbers','error'); return; }
+    if(bits < 1) bits = 1;
+    if(bits > MAX_BITS) { showToast(`numBits max ${MAX_BITS}`,'error'); return; }
+    if(samples < 1 || samples > MAX_SAMPLES) { showToast(`samples 1..${MAX_SAMPLES}`,'error'); return; }
+
+    genBtn.disabled = true; const oldHtml = genBtn.innerHTML;
+    genBtn.innerHTML = '<span class="flex items-center"><svg class="animate-spin mr-2 h-4 w-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" opacity="0.25"/></svg> Quantum Processing...</span>';
+    try {
+      showSkeletons();
+      const data = await generateRandomNumbers(bits, samples);
+
+      // log raw response for debugging
+      console.log('QRNG /generate response:', data);
+
+      if(data.status !== 'success') throw new Error(data.message || JSON.stringify(data));
+
+      lastResponse = data;
+
+      // stats may be in data.stats or data.statistics
+      const statsCandidate = data.stats ?? data.statistics ?? data;
+      updateStatistics(statsCandidate);
+      updateMetaFromResponse(data);
+
+      renderTable(data.numbers || [], bits);
+      renderDistributionGraph(data.numbers || [], bits);
+
+      // show entropy explicitly if returned
+      if(el('entropyValue')){
+        const e = data.entropy ?? data.meta?.entropy ?? statsCandidate.entropy ?? null;
+        el('entropyValue').textContent = (e !== null && e !== undefined) ? (Number(e).toFixed ? Number(e).toFixed(4) : String(e)) : '—';
+      }
+
+      showToast(`Generated ${data.num_samples ?? data.numbers?.length ?? 'N/A'} samples (${data.source ?? 'unknown'})`, 'success', 1800);
+    } catch(err) {
+      console.error(err);
+      showToast(err.message || 'Generation failed', 'error', 3500);
+      const r = el('resultDisplay');
+      if(r) r.innerHTML = `<div class="text-center py-8 text-red-300">${err.message || 'Generation failed'}</div>`;
+    } finally {
+      genBtn.disabled = false;
+      genBtn.innerHTML = oldHtml;
+    }
+  });
+}
+
+/* ========== INIT ========== */
+function initParticles(){
+  const container = document.querySelector('.fixed.inset-0.pointer-events-none') || document.querySelector('.fixed.inset-0') || document.body;
+  const target = document.querySelector('.fixed.inset-0.pointer-events-none') || document.body;
+  for(let i=0;i<12;i++){
+    const p = document.createElement('div'); p.className = 'particle';
+    p.style.left = `${Math.random()*100}%`; p.style.top = `${Math.random()*100}%`;
+    p.style.animationDelay = `${Math.random()*3}s`; p.style.animationDuration = `${2 + Math.random()*2}s`;
+    (document.querySelector('.fixed.inset-0.pointer-events-none') || document.body).appendChild(p);
+  }
+}
+
+function initAll(){
+  initGenerateHandler();
+  initCopyBtn();
+  initDownloadJson();
+  initDownloadCsv();
+  initPingBtn();
+  initThemeToggle();
+  initAccentPicker();
+  initParticles();
+  try { gsap.to('.quantum-pulse', { duration:1.5, repeat:-1, yoyo:true, ease:'power1.inOut' }); } catch(e){}
+  // Show onboarding once
+  if(!localStorage.getItem('qrngOnboarded')){
+    const onboard = el('onboarding'); if(onboard) { onboard.classList.remove('hidden'); setTimeout(()=>onboard.classList.add('hidden'),7000); }
+    localStorage.setItem('qrngOnboarded','yes');
+  }
+  console.log('Frontend initialized (v2.0 UI) — API_BASE_URL =', API_BASE_URL);
+}
+
+document.addEventListener('DOMContentLoaded', initAll);
+  </script>
 </body>
 </html>
-// --- IGNORE ---
-// End of file
