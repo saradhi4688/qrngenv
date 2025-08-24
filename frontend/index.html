@@ -1,164 +1,219 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quantum RNG — Frontend</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            primary: { DEFAULT: "#6366f1", dark: "#4338ca" }
-          }
-        }
-      }
-    }
-  </script>
+
+  <!-- Custom Quantum Theme -->
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <!-- External Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <!-- Quantum Background Animation -->
+  <script src="quantum-bg.js"></script>
 </head>
-<body class="min-h-screen bg-slate-900 text-slate-100 transition-colors duration-500">
+<body>
+  <!-- Quantum Background Container -->
+  <div id="quantum-bg"></div>
+
   <!-- Header -->
-  <header class="sticky top-0 z-10 bg-slate-800/80 backdrop-blur border-b border-slate-700 shadow-md">
-    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
-        ⚛️ <span class="animate-pulse">Quantum RNG</span>
-      </h1>
-      <div class="flex items-center gap-3">
-        <button id="toggleTheme" class="text-sm font-medium text-primary hover:text-primary-dark transition">🌙 Toggle Theme</button>
-        <a href="#" id="openInfo" class="text-sm font-medium text-primary hover:text-primary-dark transition">API Info</a>
-      </div>
-    </div>
+  <header>
+    <h1>⚛️ Quantum RNG</h1>
+    <p>Generate true random numbers using quantum mechanics</p>
   </header>
 
-  <!-- Main -->
-  <main class="max-w-5xl mx-auto px-4 py-8 space-y-8">
-    <!-- Backend URL -->
-    <section>
-      <div class="bg-slate-800 rounded-2xl shadow-lg p-5 border border-slate-700 transition hover:scale-[1.01] duration-200">
-        <div class="flex flex-col md:flex-row md:items-end md:gap-4 gap-3">
-          <label class="flex-1">
-            <span class="block text-sm font-medium text-slate-300">Backend Base URL</span>
-            <!-- default tries same origin; fallback shown -->
-            <input id="baseUrl" type="url"
-              class="mt-1 w-full rounded-xl border-slate-600 bg-slate-900 text-slate-100 focus:border-primary focus:ring-primary transition"
-              placeholder="http://localhost:5000" value="https://qrngenvbackend.onrender.com" />
-          </label>
-          <button id="pingBtn"
-            class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 font-semibold text-white hover:bg-primary-dark active:scale-[.97] transition">
-            Ping
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Control Panel -->
+    <div class="control-panel">
+      <h2>🎛️ Controls</h2>
+
+      <!-- Backend URL -->
+      <div class="input-group">
+        <label for="baseUrl">Backend Base URL</label>
+        <input id="baseUrl" type="url" value="https://qrngenvbackend.onrender.com" 
+               placeholder="http://localhost:5000" />
+        <button id="pingBtn" class="quantum-btn" style="margin-top: 0.5rem; padding: 0.5rem;">
+          Ping Backend
+        </button>
+        <p id="pingStatus" class="hidden" style="margin-top: 0.5rem; font-size: 0.9rem;"></p>
+      </div>
+
+      <!-- Controls Grid -->
+      <div class="input-group">
+        <label for="numBits">Bits per number (1–16)</label>
+        <input id="numBits" type="number" min="1" max="16" value="8" />
+      </div>
+
+      <div class="input-group">
+        <label for="numSamples">How many samples (1–1000)</label>
+        <input id="numSamples" type="number" min="1" max="1000" value="50" />
+      </div>
+
+      <!-- Generate Button -->
+      <button id="genBtn" class="quantum-btn">🌌 Generate Quantum Numbers</button>
+
+      <!-- Clear Button -->
+      <button id="clearBtn" class="quantum-btn" 
+              style="margin-top: 1rem; background: linear-gradient(45deg, var(--secondary-color), var(--accent-color));">
+        Clear Results
+      </button>
+
+      <!-- Error Display -->
+      <div id="errorBox" class="hidden" style="margin-top: 1rem; padding: 1rem; background: var(--secondary-color); border-radius: 8px; color: white;"></div>
+
+      <!-- Source Badge -->
+      <div id="sourceBadge" class="hidden" style="margin-top: 1rem;">
+        <span style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; 
+                     background: var(--bg-card); border: 1px solid var(--border-color); 
+                     border-radius: 20px; font-size: 0.9rem;">
+          <span id="sourceDot" style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-color);"></span>
+          <span id="sourceText">Source: ANU</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="results-panel">
+      <!-- Stats Card -->
+      <div id="statsCard" class="hidden">
+        <h3>📊 Statistics</h3>
+        <div class="stats-grid">
+          <div class="stat">
+            <span class="stat-label">Mean:</span>
+            <span id="statMean">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Std Dev:</span>
+            <span id="statStd">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Min:</span>
+            <span id="statMin">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Max:</span>
+            <span id="statMax">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Range:</span>
+            <span id="statRange">—</span>
+          </div>
+        </div>
+
+        <!-- Download Controls -->
+        <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="downloadJson" class="quantum-btn" style="flex: 1; font-size: 0.9rem; padding: 0.5rem;">
+            📄 JSON
+          </button>
+          <button id="downloadCsv" class="quantum-btn" style="flex: 1; font-size: 0.9rem; padding: 0.5rem;">
+            📊 CSV
+          </button>
+          <button id="copyCurl" class="quantum-btn" style="flex: 1; font-size: 0.9rem; padding: 0.5rem;">
+            📋 cURL
           </button>
         </div>
-        <p id="pingStatus" class="mt-3 text-sm text-slate-400 hidden"></p>
-      </div>
-    </section>
-
-    <!-- Controls -->
-    <section>
-      <div class="bg-slate-800 rounded-2xl shadow-lg p-5 border border-slate-700 transition hover:scale-[1.01] duration-200">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <label>
-            <span class="block text-sm font-medium text-slate-300">Bits per number (1–16)</span>
-            <input id="numBits" type="number" min="1" max="16" value="8"
-              class="mt-1 w-full rounded-xl border-slate-600 bg-slate-900 text-slate-100 focus:border-primary focus:ring-primary transition" />
-          </label>
-          <label>
-            <span class="block text-sm font-medium text-slate-300">How many samples (1–1000)</span>
-            <input id="numSamples" type="number" min="1" max="1000" value="50"
-              class="mt-1 w-full rounded-xl border-slate-600 bg-slate-900 text-slate-100 focus:border-primary focus:ring-primary transition" />
-          </label>
-          <div class="flex items-end gap-2">
-            <button id="genBtn"
-              class="flex-1 rounded-xl bg-primary text-white px-4 py-2.5 font-semibold hover:bg-primary-dark active:scale-[.97] transition">Generate</button>
-            <button id="clearBtn"
-              class="rounded-xl border border-slate-600 px-4 py-2.5 font-semibold hover:bg-slate-700 transition">Clear</button>
-          </div>
-        </div>
-        <div id="errorBox" class="mt-4 hidden rounded-xl border border-rose-600 bg-rose-900/40 p-3 text-rose-300 text-sm"></div>
-
-        <!-- Source badge -->
-        <div id="sourceBadge" class="mt-4 hidden">
-          <span
-            class="inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-900 px-3 py-1 text-sm">
-            <span id="sourceDot" class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-            <span id="sourceText">Source: ANU</span>
-          </span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Stats -->
-    <section class="space-y-6">
-      <div id="statsCard" class="hidden bg-slate-800 rounded-2xl shadow-lg p-5 border border-slate-700">
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="text-lg font-semibold">📊 Statistics</h2>
-          <div class="flex gap-2">
-            <button id="downloadJson" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-semibold hover:bg-slate-700 transition">Download JSON</button>
-            <button id="downloadCsv" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-semibold hover:bg-slate-700 transition">Download CSV</button>
-            <button id="copyCurl" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm font-semibold hover:bg-slate-700 transition">Copy cURL</button>
-          </div>
-        </div>
-        <div class="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
-          <div class="p-3 rounded-xl bg-slate-900 border border-slate-700"><div class="text-slate-400">Mean</div><div id="statMean" class="text-xl font-bold">—</div></div>
-          <div class="p-3 rounded-xl bg-slate-900 border border-slate-700"><div class="text-slate-400">Std Dev</div><div id="statStd" class="text-xl font-bold">—</div></div>
-          <div class="p-3 rounded-xl bg-slate-900 border border-slate-700"><div class="text-slate-400">Min</div><div id="statMin" class="text-xl font-bold">—</div></div>
-          <div class="p-3 rounded-xl bg-slate-900 border border-slate-700"><div class="text-slate-400">Max</div><div id="statMax" class="text-xl font-bold">—</div></div>
-          <div class="p-3 rounded-xl bg-slate-900 border border-slate-700"><div class="text-slate-400">Range</div><div id="statRange" class="text-xl font-bold">—</div></div>
-        </div>
       </div>
 
-      <!-- Chart -->
-      <div id="chartCard" class="hidden bg-slate-800 rounded-2xl shadow-lg p-5 border border-slate-700">
-        <h2 class="text-lg font-semibold mb-4">📈 Distribution</h2>
-        <div class="h-64">
-          <canvas id="histogram"></canvas>
-        </div>
+      <!-- Chart Card -->
+      <div id="chartCard" class="hidden">
+        <h3>📈 Distribution</h3>
+        <canvas id="histogram" style="max-height: 300px;"></canvas>
       </div>
 
-      <!-- Table -->
-      <div id="tableCard" class="hidden bg-slate-800 rounded-2xl shadow-lg p-5 border border-slate-700">
-        <h2 class="text-lg font-semibold mb-3">📋 Generated Numbers</h2>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
+      <!-- Table Card -->
+      <div id="tableCard" class="hidden">
+        <h3>📋 Generated Numbers</h3>
+        <div style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+          <table style="width: 100%; font-family: 'Courier New', monospace; font-size: 0.9rem;">
             <thead>
-              <tr class="text-left text-slate-400 border-b border-slate-700">
-                <th class="py-2 pr-6">#</th>
-                <th class="py-2 pr-6">Decimal</th>
-                <th class="py-2 pr-6">Binary</th>
+              <tr style="text-align: left; border-bottom: 1px solid var(--border-color);">
+                <th style="padding: 0.5rem;">#</th>
+                <th style="padding: 0.5rem;">Decimal</th>
+                <th style="padding: 0.5rem;">Binary</th>
               </tr>
             </thead>
-            <tbody id="numbersBody" class="divide-y divide-slate-700"></tbody>
+            <tbody id="numbersBody"></tbody>
           </table>
         </div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
+
+  <!-- Info Section -->
+  <div class="info-section">
+    <h3>🔬 How Quantum Random Numbers Work</h3>
+    <div class="info-grid">
+      <div class="info-card">
+        <h4>⚛️ Quantum Source</h4>
+        <p>Uses quantum mechanical processes like photon detection or atomic decay that are fundamentally random.</p>
+      </div>
+      <div class="info-card">
+        <h4>🎲 True Randomness</h4>
+        <p>Unlike computer algorithms, quantum randomness cannot be predicted or reproduced.</p>
+      </div>
+      <div class="info-card">
+        <h4>🔒 Cryptographic Grade</h4>
+        <p>Suitable for security applications requiring the highest quality random numbers.</p>
+      </div>
+      <div class="info-card">
+        <h4>🌌 Quantum Mechanics</h4>
+        <p>Based on the fundamental uncertainty principle - nature's built-in randomness.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Powered by quantum mechanics and the uncertainty principle</p>
+    <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+      <button id="toggleTheme" style="background: none; border: 1px solid var(--primary-color); 
+                                    color: var(--primary-color); padding: 0.25rem 0.5rem; 
+                                    border-radius: 4px; cursor: pointer;">
+        🌙 Toggle Theme
+      </button>
+      <button id="openInfo" style="background: none; border: 1px solid var(--primary-color); 
+                                  color: var(--primary-color); padding: 0.25rem 0.5rem; 
+                                  border-radius: 4px; cursor: pointer; margin-left: 0.5rem;">
+        ℹ️ API Info
+      </button>
+    </p>
+  </footer>
 
   <!-- Info Modal -->
-  <dialog id="infoModal" class="rounded-2xl shadow-xl border border-slate-700 backdrop:bg-slate-900/70 p-0 w-[min(580px,92vw)] bg-slate-800 text-slate-100">
-    <div class="p-5">
-      <div class="flex items-start justify-between gap-4">
-        <h3 class="text-lg font-semibold">ℹ️ API Information</h3>
-        <button id="closeInfo" class="rounded-lg border border-slate-600 px-2.5 py-1 text-sm hover:bg-slate-700 transition">Close</button>
+  <div id="infoModal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                                           background: rgba(0,0,0,0.8); z-index: 1000; 
+                                           display: flex; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border-color); 
+                border-radius: 15px; padding: 2rem; max-width: 600px; max-height: 80vh; 
+                overflow-y: auto; margin: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="color: var(--primary-color);">ℹ️ API Information</h3>
+        <button id="closeInfo" class="quantum-btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+          Close
+        </button>
       </div>
-      <pre id="infoContent" class="mt-3 whitespace-pre-wrap text-sm bg-slate-900 border border-slate-700 rounded-xl p-3 overflow-auto max-h-[60vh]"></pre>
+      <pre id="infoContent" style="background: var(--bg-dark); border: 1px solid var(--border-color); 
+                                  border-radius: 8px; padding: 1rem; overflow-x: auto; 
+                                  white-space: pre-wrap; font-size: 0.8rem;"></pre>
     </div>
-  </dialog>
-
-  <script src="./assets/app.js"></script>
-  <!-- Loading Overlay -->
-<div id="loadingOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center">
-  <div class="flex flex-col items-center gap-4">
-    <svg class="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-    </svg>
-    <p class="text-slate-200 font-semibold">Generating quantum randomness…</p>
   </div>
-</div>
 
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                                                 background: rgba(0,0,0,0.8); display: flex; 
+                                                 align-items: center; justify-content: center; z-index: 1000;">
+    <div style="text-align: center;">
+      <div class="quantum-loader"></div>
+      <p style="color: var(--text-light); margin-top: 1rem; font-weight: 600;">Generating quantum randomness…</p>
+    </div>
+  </div>
+
+  <!-- Main JavaScript -->
+  <script src="./assets/app.js"></script>
 </body>
 </html>
