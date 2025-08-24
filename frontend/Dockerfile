@@ -1,10 +1,8 @@
-# Use a lightweight web server image
-FROM nginx:alpine
+FROM nginx:stable-alpine
 
-# Copy your frontend code (HTML, JS, CSS) into nginx public folder
+# Copy HTML, CSS, JS into nginx web root
 COPY . /usr/share/nginx/html
 
-# Expose port 80 for serving frontend
 EXPOSE 80
 
-# Nginx will automatically start when the container runs
+CMD ["nginx", "-g", "daemon off;"]
