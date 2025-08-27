@@ -216,7 +216,8 @@
 <body>
     <div class="quantum-bg">
         <div class="quantum-grid"></div>
-        </div>
+        <!-- Quantum particles will be added via JavaScript -->
+    </div>
     
     <div class="container">
         <div class="header">
@@ -256,7 +257,7 @@
     <div id="toast" class="toast"></div>
 
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:5000';
+        const API_BASE_URL = window.location.origin;
         const TOKEN_KEY = 'qrng_token';
         
         function showToast(message) {
