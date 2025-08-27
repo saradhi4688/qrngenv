@@ -1,0 +1,11 @@
+Flask
+Flask-Cors
+requests
+numpy
+qiskit
+qiskit-aer
+pymongo
+bcrypt
+PyJWT
+python-dotenv
+gunicorn
