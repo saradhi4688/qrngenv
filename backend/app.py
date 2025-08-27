@@ -30,7 +30,7 @@ MAX_BITS = 16
 MAX_SAMPLES = 5000
 
 # Set the static folder to the 'frontend' directory, which is a sibling of the backend folder
-app = Flask(__name__, static_folder='frontend')
+app = Flask(__name__, static_folder='../frontend')
 app.config["DEBUG"] = True
 
 # CORS configuration - allow all origins for development
