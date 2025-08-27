@@ -29,7 +29,8 @@ ANU_API_KEY = os.environ.get("ANU_API_KEY", "")
 MAX_BITS = 16
 MAX_SAMPLES = 5000
 
-app = Flask(__name__)
+# Set the static folder to the same directory as this file
+app = Flask(__name__, static_folder='.', static_url_path='')
 app.config["DEBUG"] = True
 
 # CORS configuration - allow all origins for development
@@ -314,25 +315,13 @@ def generate_local_qiskit(num_bits: int, num_samples: int):
     return numbers[:num_samples]
 
 @app.route("/")
-def home():
-    return jsonify({
-        "message": "Quantum RNG API with Multiple Format Support",
-        "version": "2.2-format-support",
-        "build": "stable-with-formats",
-        "status": "operational",
-        "supported_formats": ["decimal", "binary", "hexadecimal"],
-        "endpoints": {
-            "/generate (POST)": "{ num_bits, num_samples, format }",
-            "/health": "check status",
-            "/export/csv": "download CSV",
-            "/export/json": "download JSON",
-            "/auth/signup (POST)": "{ email, password }",
-            "/auth/login (POST)": "{ email, password }",
-            "/auth/me": "get current user info",
-            "/save (POST)": "Save numbers (auth required)",
-            "/saves (GET)": "List saved items (auth required)"
-        }
-    })
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route("/<path:filename>")
+def serve_static_files(filename):
+    """Serve any static file from the root directory."""
+    return send_from_directory(app.static_folder, filename)
 
 @app.route("/favicon.ico")
 def favicon():
