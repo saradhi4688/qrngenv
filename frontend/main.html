@@ -139,6 +139,12 @@
             grid-template-columns: 1fr 1fr;
             gap: 24px;
         }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-bottom: 24px;
+        }
         
         .stats-panel {
             background: var(--bg);
@@ -403,6 +409,10 @@
         
         <div class="card">
             <h2>Results</h2>
+            <!-- Distribution Chart Container -->
+            <div class="chart-container">
+                <canvas id="distributionChart"></canvas>
+            </div>
             <div class="results-grid">
                 <div>
                     <h3>Statistics</h3>
@@ -455,9 +465,18 @@
                         <button class="btn btn-secondary" id="copyBtn">Copy Numbers</button>
                         <button class="btn btn-secondary" id="downloadJsonBtn">Download JSON</button>
                         <button class="btn btn-secondary" id="downloadCsvBtn">Download CSV</button>
+                        <button class="btn btn-primary" onclick="interpretWithGemini()" id="geminiBtn">✨ Interpret with Gemini</button>
                         <button class="btn btn-secondary" onclick="saveToAccount()" id="saveBtn">Save to Account</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- New card for Gemini API output -->
+        <div class="card" id="geminiCard">
+            <h2>Gemini Interpretation</h2>
+            <div id="geminiOutput" class="numbers-output" style="max-height: none; min-height: 100px;">
+                Click "✨ Interpret with Gemini" to get a creative interpretation of your numbers!
             </div>
         </div>
         
@@ -494,14 +513,19 @@
         </div>
     </div>
     
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
-        /* COMPLETE QUANTUM RNG APPLICATION - ALL JAVASCRIPT EMBEDDED */
+        /* This is the complete and corrected JavaScript for the application. */
         
         // Global variables
-        const API_BASE_URL = window.location.origin;
+        // FIXED: Change API_BASE_URL to point directly to the Flask backend's port.
+        const API_BASE_URL = 'http://127.0.0.1:5000';
         const TOKEN_KEY = 'qrng_token';
         let lastResponse = null;
         let isGuestMode = false;
+        let chartInstance = null; // To store the Chart.js instance
         
         /* ---------- DOM helpers ---------- */
         const el = id => document.getElementById(id);
@@ -515,6 +539,17 @@
             }
         };
         
+        function safeGetElement(id, required = false) {
+            const element = document.getElementById(id);
+            if (!element && required) {
+                console.error(`Critical: Required element '${id}' not found`);
+                showToast(`UI Error: Missing ${id} element`, 'error');
+            } else if (!element) {
+                console.warn(`Optional element '${id}' not found`);
+            }
+            return element;
+        }
+
         /* ---------- Number formatting functions ---------- */
         function formatNumber(num, format, bits = 8) {
             const number = parseInt(num);
@@ -604,22 +639,21 @@
             return tok ? { "Authorization": "Bearer " + tok } : {}; 
         }
         
-        /* ---------- Network functions ---------- */
+        /* ---------- Network functions with better error handling ---------- */
         async function apiPost(path, body={}, withAuth=false){
             console.log(`API POST ${path}:`, body);
-            
             let headers = { "Content-Type": "application/json" };
             if (withAuth) headers = { ...headers, ...getAuthHeaders() };
             
             try {
-                const res = await fetch(API_BASE_URL + path, { 
-                    method: "POST", 
-                    headers, 
-                    body: JSON.stringify(body) 
+                const res = await fetch(API_BASE_URL + path, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(body),
                 });
                 
                 const txt = await res.text();
-                console.log(`API Response (${res.status}):`, txt.substring(0, 200));
+                console.log(`API Response (${res.status}):`, txt.substring(0, 200) + (txt.length > 200 ? '...' : ''));
                 
                 try {
                     const json = JSON.parse(txt);
@@ -631,20 +665,26 @@
                 }
             } catch(err) {
                 console.error(`API POST ${path} failed:`, err);
+                if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                    throw new Error('Cannot connect to server. Is the backend running?');
+                }
                 throw err;
             }
         }
         
         async function apiGet(path, withAuth=false){
             console.log(`API GET ${path}`);
-            
             let headers = {};
             if (withAuth) headers = { ...getAuthHeaders() };
             
             try {
-                const res = await fetch(API_BASE_URL + path, { method: "GET", headers });
+                const res = await fetch(API_BASE_URL + path, { 
+                    method: "GET", 
+                    headers,
+                });
+                
                 const txt = await res.text();
-                console.log(`API Response (${res.status}):`, txt.substring(0, 200));
+                console.log(`API Response (${res.status}):`, txt.substring(0, 200) + (txt.length > 200 ? '...' : ''));
                 
                 try {
                     const json = JSON.parse(txt);
@@ -656,17 +696,17 @@
                 }
             } catch(err) {
                 console.error(`API GET ${path} failed:`, err);
+                if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                    throw new Error('Cannot connect to server. Is the backend running?');
+                }
                 throw err;
             }
         }
-        
+
         /* ---------- GENERATE HANDLER ---------- */
         function initGenerateHandler(){
-            const btn = el('generateBtn');
-            if (!btn) {
-                console.error('Generate button not found!');
-                return;
-            }
+            const btn = safeGetElement('generateBtn', true);
+            if (!btn) return;
             
             console.log('Generate handler initialized');
             
@@ -674,23 +714,28 @@
                 ev.preventDefault();
                 console.log('Generate button clicked');
                 
-                // Check if user can generate (logged in or guest mode)
                 if (!getAuthToken() && !isGuestMode) {
                     showToast('Please login or continue as guest to generate numbers', 'error');
                     return;
                 }
                 
-                const numBitsEl = el('numBits');
-                const numSamplesEl = el('numSamples');
-                const formatEl = el('numberFormat');
+                const numBitsEl = safeGetElement('numBits');
+                const numSamplesEl = safeGetElement('numSamples');
+                const formatEl = safeGetElement('numberFormat');
                 
                 let num_bits = numBitsEl ? parseInt(numBitsEl.value || 8, 10) : 8;
                 let num_samples = numSamplesEl ? parseInt(numSamplesEl.value || 10, 10) : 10;
                 let format = formatEl ? formatEl.value || 'decimal' : 'decimal';
                 
-                if (isNaN(num_bits) || num_bits < 1) num_bits = 8;
-                if (isNaN(num_samples) || num_samples < 1) num_samples = 10;
-                
+                if (isNaN(num_bits) || num_bits < 1 || num_bits > 16) {
+                    showToast('Number of bits must be between 1 and 16', 'error');
+                    return;
+                }
+                if (isNaN(num_samples) || num_samples < 1 || num_samples > 5000) {
+                    showToast('Number of samples must be between 1 and 5000', 'error');
+                    return;
+                }
+
                 console.log(`Generating: ${num_bits} bits, ${num_samples} samples, format: ${format}`);
                 
                 btn.disabled = true;
@@ -774,12 +819,111 @@
                     statusBar.style.color = 'white';
                 }
                 
+                // Render the distribution chart
+                renderChart(res.numbers || [], bits);
+                
                 console.log('Successfully rendered generation result');
                 
             } catch(e) {
                 console.error('renderGenerationResult failed:', e);
                 showToast('Failed to display results: ' + e.message, 'error');
             }
+        }
+        
+        /* ---------- CHART FUNCTION ---------- */
+        function renderChart(numbers, bits) {
+            const canvas = el('distributionChart');
+            if (!canvas) return;
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Create bins for the histogram
+            const maxVal = Math.pow(2, bits) - 1;
+            const numBins = Math.min(64, maxVal + 1);
+            const binSize = (maxVal + 1) / numBins;
+            const bins = Array(numBins).fill(0);
+            
+            if (numbers.length > 0) {
+                numbers.forEach(num => {
+                    const binIndex = Math.floor(num / binSize);
+                    if (binIndex >= 0 && binIndex < numBins) {
+                        bins[binIndex]++;
+                    }
+                });
+            }
+
+            const binLabels = bins.map((_, i) => {
+                const start = Math.floor(i * binSize);
+                const end = Math.floor((i + 1) * binSize) - 1;
+                return `${start}-${end}`;
+            });
+
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const textColor = isDarkMode ? '#f9fafb' : '#1f2937';
+            const gridColor = isDarkMode ? 'rgba(249, 250, 251, 0.2)' : 'rgba(31, 41, 55, 0.2)';
+            const barColor = isDarkMode ? '#8b5cf6' : '#6b21a8';
+            const barHoverColor = isDarkMode ? '#a78bfa' : '#581c87';
+
+            chartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: binLabels,
+                    datasets: [{
+                        label: 'Number Count',
+                        data: bins,
+                        backgroundColor: barColor,
+                        hoverBackgroundColor: barHoverColor,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Value Range',
+                                color: textColor,
+                            },
+                            ticks: {
+                                color: textColor,
+                            },
+                            grid: {
+                                color: gridColor,
+                            },
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Frequency',
+                                color: textColor,
+                            },
+                            ticks: {
+                                color: textColor,
+                            },
+                            grid: {
+                                color: gridColor,
+                            },
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number Distribution',
+                            color: textColor,
+                            font: {
+                                size: 16,
+                                weight: 'bold',
+                            },
+                        },
+                    },
+                }
+            });
         }
         
         /* ---------- COPY BUTTON ---------- */
@@ -801,7 +945,7 @@
                 }
                 
                 try {
-                    await navigator.clipboard.writeText(txt);
+                    document.execCommand('copy');
                     const formatEl = el('numberFormat');
                     const format = formatEl ? formatEl.value : 'decimal';
                     showToast(`${getFormatDisplayName(format)} numbers copied to clipboard!`, 'success');
@@ -932,6 +1076,10 @@
             btn.addEventListener('click', () => {
                 const isDark = document.documentElement.classList.contains('dark');
                 applyTheme(isDark ? 'light' : 'dark');
+                // Re-render chart if it exists
+                if (chartInstance && lastResponse) {
+                    renderChart(lastResponse.numbers || [], parseInt(el('numBits').value));
+                }
             });
         }
         
@@ -1122,7 +1270,7 @@
                 } catch (e) {
                     console.warn('Token validation failed:', e);
                     setAuthToken(null);
-                    if (authButtons) authButtons.classList.remove('hidden');
+                    if (authButtons) authButtons.classList.add('hidden'); // Corrected
                     if (saveBtn) saveBtn.style.display = 'none';
                     renderSaves([]);
                 }
@@ -1276,6 +1424,68 @@
             } catch(err) {
                 console.error('Delete save failed:', err);
                 showToast('Delete failed: ' + (err.message || err), 'error');
+            }
+        }
+        
+        /* ---------- GEMINI API FUNCTION ---------- */
+        async function interpretWithGemini() {
+            const geminiBtn = el('geminiBtn');
+            const geminiOutput = el('geminiOutput');
+
+            if (!lastResponse || !lastResponse.numbers || lastResponse.numbers.length === 0) {
+                showToast('Please generate numbers first.', 'warning');
+                return;
+            }
+
+            // Show loading state
+            geminiBtn.disabled = true;
+            geminiBtn.textContent = 'Interpreting...';
+            geminiOutput.textContent = 'Generating a creative interpretation of your data...';
+
+            const apiKey = "AIzaSyC7GayU7ZYMddL2pFUZ7H-f06q4FYN7BMQ";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const stats = lastResponse.stats || {};
+            const prompt = `You are a creative data poet. Take the following statistics from a set of quantum random numbers and create a short, imaginative story or metaphorical interpretation of the data. Focus on concepts like randomness, uniformity, and the cosmos.
+
+Numbers generated from a ${lastResponse.source} source.
+- Count: ${stats.count || 'N/A'}
+- Mean: ${stats.mean ? stats.mean.toFixed(2) : 'N/A'}
+- Standard Deviation: ${stats.std ? stats.std.toFixed(2) : 'N/A'}
+- Entropy: ${lastResponse.entropy ? lastResponse.entropy.toFixed(3) : 'N/A'}
+- Range: ${stats.min || 'N/A'} to ${stats.max || 'N/A'}
+
+Do not provide the numbers themselves, just the creative interpretation.`;
+            
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    geminiOutput.textContent = text;
+                    showToast('Gemini interpretation generated!', 'success');
+                } else {
+                    geminiOutput.textContent = 'Failed to get an interpretation. Please try again.';
+                    showToast('Gemini API returned an unexpected response.', 'error');
+                }
+            } catch (err) {
+                console.error('Gemini API error:', err);
+                geminiOutput.textContent = 'An error occurred while contacting the Gemini API.';
+                showToast('Failed to contact Gemini API: ' + (err.message || err), 'error');
+            } finally {
+                geminiBtn.disabled = false;
+                geminiBtn.textContent = '✨ Interpret with Gemini';
             }
         }
         

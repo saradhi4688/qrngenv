@@ -29,8 +29,8 @@ ANU_API_KEY = os.environ.get("ANU_API_KEY", "")
 MAX_BITS = 16
 MAX_SAMPLES = 5000
 
-# Set the static folder to the 'frontend' directory, assuming it's a sibling of the 'backend' folder
-app = Flask(__name__, static_folder='../frontend')
+# Set the static folder to the 'frontend' directory, which is a sibling of the backend folder
+app = Flask(__name__, static_folder='frontend')
 app.config["DEBUG"] = True
 
 # CORS configuration - allow all origins for development
@@ -47,9 +47,6 @@ logger = logging.getLogger(__name__)
 session = requests.Session()
 retries = Retry(total=3, backoff_factor=0.6, status_forcelist=(500,502,503,504))
 session.mount("https://", HTTPAdapter(max_retries=retries))
-
-# If you want to set a non-sensitive header globally (not the API key), you can:
-# session.headers.update({"Accept": "application/json"})
 
 # Thread safety
 lock = threading.Lock()
@@ -320,7 +317,7 @@ def serve_intro():
 
 @app.route("/<path:path>")
 def serve_static_files(path):
-    """Serve any static file from the root directory."""
+    """Serve any static file from the frontend directory."""
     return send_from_directory(app.static_folder, path)
 
 @app.route("/favicon.ico")
@@ -758,6 +755,34 @@ def metrics():
         "last_format": format_type,
         "supported_formats": ["decimal", "binary", "hexadecimal"],
         "timestamp": now_iso()
+    })
+
+@app.route("/api/interpret", methods=["POST"])
+def interpret_api():
+    try:
+        data = request.get_json(force=True) or {}
+    except Exception as e:
+        logger.error(f"Invalid JSON in request: {e}")
+        return jsonify({
+            "status": "error",
+            "error_code": "INVALID_JSON",
+            "message": "Invalid JSON body"
+        }), 400
+
+    prompt = data.get("prompt")
+    if not prompt:
+        return jsonify({
+            "status": "error",
+            "message": "Prompt is required"
+        }), 400
+    
+    # You would typically have a function here to call the Gemini API
+    # and return the result. For this example, we'll just echo the prompt.
+    response_text = f"Interpretation of your data: {prompt}"
+    
+    return jsonify({
+        "status": "success",
+        "interpretation": response_text
     })
 
 if __name__ == "__main__":
