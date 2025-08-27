@@ -29,8 +29,8 @@ ANU_API_KEY = os.environ.get("ANU_API_KEY", "")
 MAX_BITS = 16
 MAX_SAMPLES = 5000
 
-# Set the static folder to the 'frontend' directory
-app = Flask(__name__, static_folder='.', static_url_path='')
+# Set the static folder to the 'frontend' directory, which is relative to the backend folder
+app = Flask(__name__, static_folder='../frontend')
 app.config["DEBUG"] = True
 
 # CORS configuration - allow all origins for development
