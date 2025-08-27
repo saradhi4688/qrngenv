@@ -289,7 +289,7 @@
     <div id="toast" class="toast"></div>
 
     <script>
-        const API_BASE_URL = window.location.origin;
+        const API_BASE_URL = 'https://qrngbackend.onrender.com';
         const TOKEN_KEY = 'qrng_token';
 
         function showToast(message) {
@@ -346,13 +346,22 @@
                     body: JSON.stringify({ email, password }),
                 });
 
-                const data = await response.json();
-                
+                // Check if the response was successful first
                 if (response.ok) {
+                    const data = await response.json();
                     localStorage.setItem(TOKEN_KEY, data.token);
                     localStorage.removeItem('qrng_guest_mode');
                     window.location.href = 'main.html';
                 } else {
+                    // If the response is an error, try to parse JSON for a message
+                    let data = {};
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        // If parsing fails, use a generic error message
+                        showToast(`Login failed: HTTP ${response.status}`);
+                        return;
+                    }
                     showToast(data.message || 'Login failed.');
                 }
             } catch (error) {
@@ -375,3 +384,4 @@
     </script>
 </body>
 </html>
+
