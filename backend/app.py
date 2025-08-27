@@ -1,5 +1,5 @@
 # app.py (updated)
-from flask import Flask, request, jsonify, Response, g
+from flask import Flask, request, jsonify, Response, g, send_from_directory
 from flask_cors import CORS
 import time, math, logging, io, csv, json, datetime, threading, os
 import requests
@@ -333,6 +333,14 @@ def home():
             "/saves (GET)": "List saved items (auth required)"
         }
     })
+
+@app.route("/favicon.ico")
+def favicon():
+    """
+    Handles requests for favicon.ico to prevent 404 errors in the logs.
+    A blank icon is returned.
+    """
+    return "", 204
 
 @app.route("/health")
 def health():
