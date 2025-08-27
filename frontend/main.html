@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum RNG - Generate True Random Numbers</title>
+    <style>
+        :root {
+            --accent: #6b21a8;
+            --bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+            --card: #f9fafb;
+        }
+        
+        .dark {
+            --bg: #111827;
+            --text: #f9fafb;
+            --border: #374151;
+            --card: #1f2937;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .generate-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input[type="number"], input[type="email"], input[type="password"], select {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 16px;
+        }
+        
+        select {
+            cursor: pointer;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #581c87;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .btn-guest {
+            background: #059669;
+            color: white;
+        }
+        
+        .btn-guest:hover {
+            background: #047857;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        .stats-panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            font-weight: 500;
+        }
+        
+        .numbers-output {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .format-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            background: var(--accent);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .auth-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 999;
+        }
+        
+        .status-bar {
+            text-align: center;
+            padding: 12px;
+            background: var(--card);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .guest-mode {
+            background: #059669;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 12px;
+            min-width: 300px;
+            max-width: 400px;
+            width: 90%;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-content h3 {
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .modal-content input {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+        
+        .modal-buttons .btn {
+            padding: 10px 20px;
+        }
+        
+        /* Format Examples */
+        .format-examples {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .generate-section {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .auth-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .auth-buttons {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .generate-section {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" id="themeToggle">🌞</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Quantum Random Number Generator</h1>
+            <p>Generate truly random numbers using quantum mechanics</p>
+        </div>
+        
+        <div class="auth-section">
+            <div class="user-info hidden" id="userInfo">
+                <span>Welcome, <span id="userEmail">user@example.com</span></span>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+            
+            <div class="user-info hidden" id="guestInfo">
+                <span class="guest-mode">Guest Mode</span>
+                <button class="btn btn-secondary" onclick="exitGuestMode()">Login</button>
+            </div>
+            
+            <div class="auth-buttons" id="authButtons">
+                <button class="btn btn-primary" onclick="showSignupModal()">Sign Up</button>
+                <button class="btn btn-secondary" onclick="showLoginModal()">Login</button>
+                <button class="btn btn-guest" onclick="enterGuestMode()">Continue as Guest</button>
+            </div>
+            
+            <div>
+                <button class="btn btn-secondary" id="pingBtn">Test Connection</button>
+            </div>
+        </div>
+        
+        <div class="status-bar" id="statusBar">
+            Ready to generate quantum random numbers
+        </div>
+        
+        <div class="card">
+            <h2>Generate Random Numbers</h2>
+            <div class="generate-section">
+                <div class="form-group">
+                    <label for="numBits">Number of Bits (1-16)</label>
+                    <input type="number" id="numBits" min="1" max="16" value="8">
+                    <div class="format-examples">Controls the range of numbers</div>
+                </div>
+                <div class="form-group">
+                    <label for="numSamples">Number of Samples (1-5000)</label>
+                    <input type="number" id="numSamples" min="1" max="5000" value="10">
+                    <div class="format-examples">How many numbers to generate</div>
+                </div>
+                <div class="form-group">
+                    <label for="numberFormat">Output Format</label>
+                    <select id="numberFormat">
+                        <option value="decimal">Decimal (0-255)</option>
+                        <option value="binary">Binary (00000000-11111111)</option>
+                        <option value="hexadecimal">Hexadecimal (00-FF)</option>
+                    </select>
+                    <div class="format-examples">Choose display format</div>
+                </div>
+                <button class="btn btn-primary" id="generateBtn">Generate</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Results</h2>
+            <div class="results-grid">
+                <div>
+                    <h3>Statistics</h3>
+                    <div class="stats-panel" id="statsPanel">
+                        <div class="stat-item">
+                            <span class="stat-label">Count:</span>
+                            <span id="statCount">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Mean:</span>
+                            <span id="statMean">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Std Dev:</span>
+                            <span id="statStd">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Minimum:</span>
+                            <span id="statMin">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Maximum:</span>
+                            <span id="statMax">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Entropy:</span>
+                            <span id="statEntropy">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Format:</span>
+                            <span id="statFormat">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Source:</span>
+                            <span id="statSource">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Timestamp:</span>
+                            <span id="statTimestamp">—</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3>Generated Numbers</h3>
+                    <div id="formatIndicator" class="format-indicator" style="display: none;">Decimal Format</div>
+                    <div class="numbers-output" id="numbersOutput">
+                        No numbers generated yet
+                    </div>
+                    <div class="controls">
+                        <button class="btn btn-secondary" id="copyBtn">Copy Numbers</button>
+                        <button class="btn btn-secondary" id="downloadJsonBtn">Download JSON</button>
+                        <button class="btn btn-secondary" id="downloadCsvBtn">Download CSV</button>
+                        <button class="btn btn-secondary" onclick="saveToAccount()" id="saveBtn">Save to Account</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" id="savesCard">
+            <h2>Saved Items</h2>
+            <div id="savesList">
+                Please login or continue as guest to use the generator.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Auth Modals -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <h3>Create Account</h3>
+            <input type="email" id="signupEmail" placeholder="Enter your email">
+            <input type="password" id="signupPassword" placeholder="Password (minimum 6 characters)">
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="signup()">Create Account</button>
+                <button class="btn btn-secondary" onclick="hideModals()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h3>Login to Your Account</h3>
+            <input type="email" id="loginEmail" placeholder="Enter your email">
+            <input type="password" id="loginPassword" placeholder="Enter your password">
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="login()">Login</button>
+                <button class="btn btn-secondary" onclick="hideModals()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        /* COMPLETE QUANTUM RNG APPLICATION - ALL JAVASCRIPT EMBEDDED */
+        
+        // Global variables
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+        const TOKEN_KEY = 'qrng_token';
+        let lastResponse = null;
+        let isGuestMode = false;
+        
+        /* ---------- DOM helpers ---------- */
+        const el = id => document.getElementById(id);
+        const safeText = (id, txt) => { 
+            const e = el(id); 
+            if(e) {
+                e.textContent = txt; 
+                console.log(`Updated ${id}: ${txt}`);
+            } else {
+                console.warn(`Element ${id} not found`);
+            }
+        };
+        
+        /* ---------- Number formatting functions ---------- */
+        function formatNumber(num, format, bits = 8) {
+            const number = parseInt(num);
+            
+            switch(format) {
+                case 'binary':
+                    return number.toString(2).padStart(bits, '0');
+                case 'hexadecimal':
+                    const hexDigits = Math.ceil(bits / 4);
+                    return number.toString(16).toUpperCase().padStart(hexDigits, '0');
+                case 'decimal':
+                default:
+                    return number.toString();
+            }
+        }
+        
+        function formatNumberArray(numbers, format, bits = 8) {
+            if (!Array.isArray(numbers)) return [];
+            return numbers.map(num => formatNumber(num, format, bits));
+        }
+        
+        function getFormatDisplayName(format) {
+            const names = {
+                'decimal': 'Decimal',
+                'binary': 'Binary', 
+                'hexadecimal': 'Hexadecimal'
+            };
+            return names[format] || 'Decimal';
+        }
+        
+        /* ---------- Toast notifications ---------- */
+        function showToast(msg, type='info', ms=4000){
+            console.log(`Toast: ${type} - ${msg}`);
+            
+            // Remove existing toasts
+            document.querySelectorAll('.qrng-toast').forEach(t => t.remove());
+            
+            const t = document.createElement('div');
+            t.className = 'qrng-toast ' + type;
+            t.textContent = msg;
+            
+            const colors = {
+                error: '#dc2626',
+                success: '#16a34a', 
+                info: '#2563eb',
+                warning: '#d97706'
+            };
+            
+            Object.assign(t.style, { 
+                position: 'fixed', 
+                right: '20px', 
+                bottom: '20px', 
+                padding: '12px 16px', 
+                background: colors[type] || colors.info,
+                color: '#fff', 
+                borderRadius: '8px', 
+                zIndex: 10000,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                fontSize: '14px',
+                maxWidth: '300px',
+                wordWrap: 'break-word'
+            });
+            
+            document.body.appendChild(t);
+            setTimeout(() => {
+                if (t.parentNode) t.remove();
+            }, ms);
+        }
+        
+        /* ---------- Auth helpers ---------- */
+        function getAuthToken() { 
+            return localStorage.getItem(TOKEN_KEY); 
+        }
+        
+        function setAuthToken(t) { 
+            if (t) {
+                localStorage.setItem(TOKEN_KEY, t);
+                console.log('Token saved');
+            } else {
+                localStorage.removeItem(TOKEN_KEY);
+                console.log('Token removed');
+            }
+        }
+        
+        function getAuthHeaders() { 
+            const tok = getAuthToken(); 
+            return tok ? { "Authorization": "Bearer " + tok } : {}; 
+        }
+        
+        /* ---------- Network functions ---------- */
+        async function apiPost(path, body={}, withAuth=false){
+            console.log(`API POST ${path}:`, body);
+            
+            let headers = { "Content-Type": "application/json" };
+            if (withAuth) headers = { ...headers, ...getAuthHeaders() };
+            
+            try {
+                const res = await fetch(API_BASE_URL + path, { 
+                    method: "POST", 
+                    headers, 
+                    body: JSON.stringify(body) 
+                });
+                
+                const txt = await res.text();
+                console.log(`API Response (${res.status}):`, txt.substring(0, 200));
+                
+                try {
+                    const json = JSON.parse(txt);
+                    if (!res.ok) throw new Error(json.message || json.error || txt || `HTTP ${res.status}`);
+                    return json;
+                } catch(e) {
+                    if (!res.ok) throw new Error(txt || e.message);
+                    throw e;
+                }
+            } catch(err) {
+                console.error(`API POST ${path} failed:`, err);
+                throw err;
+            }
+        }
+        
+        async function apiGet(path, withAuth=false){
+            console.log(`API GET ${path}`);
+            
+            let headers = {};
+            if (withAuth) headers = { ...getAuthHeaders() };
+            
+            try {
+                const res = await fetch(API_BASE_URL + path, { method: "GET", headers });
+                const txt = await res.text();
+                console.log(`API Response (${res.status}):`, txt.substring(0, 200));
+                
+                try {
+                    const json = JSON.parse(txt);
+                    if (!res.ok) throw new Error(json.message || json.error || txt || `HTTP ${res.status}`);
+                    return json;
+                } catch(e) {
+                    if (!res.ok) throw new Error(txt || e.message);
+                    throw e;
+                }
+            } catch(err) {
+                console.error(`API GET ${path} failed:`, err);
+                throw err;
+            }
+        }
+        
+        /* ---------- GENERATE HANDLER ---------- */
+        function initGenerateHandler(){
+            const btn = el('generateBtn');
+            if (!btn) {
+                console.error('Generate button not found!');
+                return;
+            }
+            
+            console.log('Generate handler initialized');
+            
+            btn.addEventListener('click', async (ev) => {
+                ev.preventDefault();
+                console.log('Generate button clicked');
+                
+                // Check if user can generate (logged in or guest mode)
+                if (!getAuthToken() && !isGuestMode) {
+                    showToast('Please login or continue as guest to generate numbers', 'error');
+                    return;
+                }
+                
+                const numBitsEl = el('numBits');
+                const numSamplesEl = el('numSamples');
+                const formatEl = el('numberFormat');
+                
+                let num_bits = numBitsEl ? parseInt(numBitsEl.value || 8, 10) : 8;
+                let num_samples = numSamplesEl ? parseInt(numSamplesEl.value || 10, 10) : 10;
+                let format = formatEl ? formatEl.value || 'decimal' : 'decimal';
+                
+                if (isNaN(num_bits) || num_bits < 1) num_bits = 8;
+                if (isNaN(num_samples) || num_samples < 1) num_samples = 10;
+                
+                console.log(`Generating: ${num_bits} bits, ${num_samples} samples, format: ${format}`);
+                
+                btn.disabled = true;
+                btn.textContent = 'Generating...';
+                
+                try {
+                    const res = await apiPost('/generate', { 
+                        num_bits, 
+                        num_samples, 
+                        format 
+                    }, false);
+                    
+                    console.log('Generation response:', res);
+                    
+                    lastResponse = res;
+                    renderGenerationResult(res, format, num_bits);
+                    
+                    const count = res.numbers ? res.numbers.length : 0;
+                    showToast(`Generated ${count} ${getFormatDisplayName(format).toLowerCase()} numbers from ${res.source || 'unknown'}`, 'success');
+                    
+                } catch(err) {
+                    console.error('Generate error:', err);
+                    showToast('Generation failed: ' + (err.message || err), 'error', 6000);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Generate';
+                }
+            });
+        }
+        
+        /* ---------- RENDER RESULTS ---------- */
+        function renderGenerationResult(res, format = 'decimal', bits = 8) {
+            console.log('Rendering generation result:', res, 'Format:', format);
+            
+            try {
+                const numbersOutput = el('numbersOutput');
+                const formatIndicator = el('formatIndicator');
+                
+                if (numbersOutput && formatIndicator) {
+                    if (Array.isArray(res.numbers) && res.numbers.length > 0) {
+                        const formattedNumbers = formatNumberArray(res.numbers.slice(0, 1000), format, bits);
+                        
+                        numbersOutput.textContent = formattedNumbers.join(', ');
+                        
+                        if (res.numbers.length > 1000) {
+                            numbersOutput.textContent += `\n\n... (showing first 1000 of ${res.numbers.length} ${getFormatDisplayName(format).toLowerCase()} numbers)`;
+                        }
+                        
+                        formatIndicator.textContent = `${getFormatDisplayName(format)} Format`;
+                        formatIndicator.style.display = 'inline-block';
+                        
+                        console.log(`Displayed ${formattedNumbers.length} numbers in ${format} format`);
+                    } else {
+                        numbersOutput.textContent = 'No numbers generated';
+                        formatIndicator.style.display = 'none';
+                        console.warn('No numbers in response');
+                    }
+                }
+                
+                // Update stats
+                if (res.stats) {
+                    safeText('statCount', res.stats.count || 0);
+                    safeText('statMean', res.stats.mean ? Number(res.stats.mean).toFixed(2) : '—');
+                    safeText('statStd', res.stats.std ? Number(res.stats.std).toFixed(2) : '—');
+                    safeText('statMin', res.stats.min !== undefined ? res.stats.min : '—');
+                    safeText('statMax', res.stats.max !== undefined ? res.stats.max : '—');
+                }
+                
+                safeText('statEntropy', res.entropy ? Number(res.entropy).toFixed(3) : '—');
+                safeText('statFormat', getFormatDisplayName(format));
+                safeText('statSource', res.source || '—');
+                safeText('statTimestamp', res.timestamp ? new Date(res.timestamp).toLocaleString() : '—');
+                
+                // Update status bar
+                const statusBar = el('statusBar');
+                if (statusBar) {
+                    const count = res.numbers ? res.numbers.length : 0;
+                    const source = res.source || 'unknown';
+                    statusBar.textContent = `✓ Generated ${count} ${getFormatDisplayName(format).toLowerCase()} numbers from ${source} source`;
+                    statusBar.style.background = '#16a34a';
+                    statusBar.style.color = 'white';
+                }
+                
+                console.log('Successfully rendered generation result');
+                
+            } catch(e) {
+                console.error('renderGenerationResult failed:', e);
+                showToast('Failed to display results: ' + e.message, 'error');
+            }
+        }
+        
+        /* ---------- COPY BUTTON ---------- */
+        function initCopyBtn() {
+            const b = el('copyBtn');
+            if (!b) return;
+            
+            b.addEventListener('click', async () => {
+                const txtEl = el('numbersOutput');
+                if (!txtEl) { 
+                    showToast('Nothing to copy', 'error'); 
+                    return; 
+                }
+                
+                const txt = txtEl.textContent || '';
+                if (!txt || txt === 'No numbers generated yet') {
+                    showToast('Generate numbers first', 'error');
+                    return;
+                }
+                
+                try {
+                    await navigator.clipboard.writeText(txt);
+                    const formatEl = el('numberFormat');
+                    const format = formatEl ? formatEl.value : 'decimal';
+                    showToast(`${getFormatDisplayName(format)} numbers copied to clipboard!`, 'success');
+                } catch(e) {
+                    console.error('Copy failed:', e);
+                    showToast('Copy failed', 'error');
+                }
+            });
+        }
+        
+        /* ---------- DOWNLOAD FUNCTIONS ---------- */
+        function initDownloadJson() {
+            const b = el('downloadJsonBtn');
+            if (!b) return;
+            
+            b.addEventListener('click', () => {
+                if (!lastResponse || !lastResponse.numbers) { 
+                    showToast('Generate numbers first', 'error'); 
+                    return; 
+                }
+                
+                const formatEl = el('numberFormat');
+                const bitsEl = el('numBits');
+                const format = formatEl ? formatEl.value : 'decimal';
+                const bits = bitsEl ? parseInt(bitsEl.value) : 8;
+                
+                const downloadData = {
+                    ...lastResponse,
+                    display_format: format,
+                    formatted_numbers: formatNumberArray(lastResponse.numbers, format, bits)
+                };
+                
+                const blob = new Blob([JSON.stringify(downloadData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; 
+                a.download = `qrng_${format}_${new Date().toISOString().slice(0,10)}_${Date.now()}.json`;
+                document.body.appendChild(a); 
+                a.click(); 
+                a.remove(); 
+                URL.revokeObjectURL(url);
+                showToast(`JSON file downloaded (${getFormatDisplayName(format)} format)`, 'success');
+            });
+        }
+        
+        function initDownloadCsv() {
+            const b = el('downloadCsvBtn');
+            if (!b) return;
+            
+            b.addEventListener('click', () => {
+                if (!lastResponse || !lastResponse.numbers) { 
+                    showToast('Generate numbers first', 'error'); 
+                    return; 
+                }
+                
+                const formatEl = el('numberFormat');
+                const bitsEl = el('numBits');
+                const format = formatEl ? formatEl.value : 'decimal';
+                const bits = bitsEl ? parseInt(bitsEl.value) : 8;
+                
+                const formattedNumbers = formatNumberArray(lastResponse.numbers, format, bits);
+                
+                const rows = [`index,decimal,${format}`];
+                lastResponse.numbers.forEach((n, i) => {
+                    rows.push(`${i+1},${n},${formattedNumbers[i]}`);
+                });
+                
+                const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); 
+                a.href = url; 
+                a.download = `qrng_${format}_${new Date().toISOString().slice(0,10)}_${Date.now()}.csv`;
+                document.body.appendChild(a); 
+                a.click(); 
+                a.remove(); 
+                URL.revokeObjectURL(url);
+                showToast(`CSV file downloaded (${getFormatDisplayName(format)} format)`, 'success');
+            });
+        }
+        
+        /* ---------- PING BUTTON ---------- */
+        function initPingBtn() {
+            const b = el('pingBtn');
+            if (!b) return;
+            
+            b.addEventListener('click', async () => {
+                b.disabled = true;
+                b.textContent = 'Testing...';
+                
+                try {
+                    const h = await apiGet('/health', false);
+                    const anuStatus = h.anu ? '✓ Online' : '✗ Offline';
+                    const simStatus = h.simulator ? '✓ Ready' : '✗ Error';
+                    showToast(`Backend Online\nANU QRNG: ${anuStatus}\nSimulator: ${simStatus}`, 'success', 5000);
+                } catch(e) {
+                    showToast('Connection failed: ' + (e.message || e), 'error');
+                } finally {
+                    b.disabled = false;
+                    b.textContent = 'Test Connection';
+                }
+            });
+        }
+        
+        /* ---------- THEME TOGGLE ---------- */
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            localStorage.setItem('qrng_theme', theme);
+            const tbtn = el('themeToggle'); 
+            if (tbtn) tbtn.textContent = theme === 'dark' ? '🌗' : '🌞';
+        }
+        
+        function initThemeToggle() {
+            const btn = el('themeToggle');
+            if (!btn) return;
+            
+            const saved = localStorage.getItem('qrng_theme');
+            if (saved) {
+                applyTheme(saved);
+            } else {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                applyTheme(prefersDark ? 'dark' : 'light');
+            }
+            
+            btn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                applyTheme(isDark ? 'light' : 'dark');
+            });
+        }
+        
+        function initAccentPicker() {
+            // Placeholder for accent picker
+        }
+        
+        function initParticles() {
+            // Placeholder for particles
+        }
+        
+        /* ---------- FORMAT HANDLER ---------- */
+        function initFormatHandler() {
+            const formatSelect = el('numberFormat');
+            const bitsInput = el('numBits');
+            
+            const updateFormatExamples = () => {
+                const format = formatSelect?.value || 'decimal';
+                const bits = parseInt(bitsInput?.value || 8);
+                const maxVal = Math.pow(2, bits) - 1;
+                
+                const examples = {
+                    decimal: `(0-${maxVal})`,
+                    binary: `(${'0'.repeat(bits)}-${'1'.repeat(bits)})`,
+                    hexadecimal: `(00-${maxVal.toString(16).toUpperCase().padStart(Math.ceil(bits/4), '0')})`
+                };
+                
+                if (formatSelect) {
+                    const options = formatSelect.querySelectorAll('option');
+                    options[0].textContent = `Decimal ${examples.decimal}`;
+                    options[1].textContent = `Binary ${examples.binary}`;
+                    options[2].textContent = `Hexadecimal ${examples.hexadecimal}`;
+                }
+            };
+            
+            if (formatSelect) formatSelect.addEventListener('change', updateFormatExamples);
+            if (bitsInput) bitsInput.addEventListener('input', updateFormatExamples);
+            
+            updateFormatExamples();
+        }
+        
+        /* ---------- MODAL MANAGEMENT ---------- */
+        function initModals() {
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    hideModals();
+                }
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideModals();
+                }
+            });
+        }
+        
+        function showModal(modalId) {
+            hideModals();
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('show');
+                const firstInput = modal.querySelector('input');
+                if (firstInput) {
+                    setTimeout(() => firstInput.focus(), 300);
+                }
+            }
+        }
+        
+        function hideModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('show');
+            });
+        }
+        
+        function showSignupModal() {
+            showModal('signupModal');
+        }
+        
+        function showLoginModal() {
+            showModal('loginModal');
+        }
+        
+        /* ---------- AUTH FUNCTIONS ---------- */
+        function enterGuestMode() {
+            console.log('Entering guest mode');
+            isGuestMode = true;
+            localStorage.setItem('guestMode', 'true');
+            updateAuthUi();
+            showToast('Welcome! You can now use the generator as a guest.', 'success');
+        }
+        
+        function exitGuestMode() {
+            isGuestMode = false;
+            localStorage.removeItem('guestMode');
+            updateAuthUi();
+            showLoginModal();
+        }
+        
+        async function signup() {
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            
+            if (!email || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            try {
+                const res = await apiPost('/auth/signup', { email, password });
+                setAuthToken(res.token);
+                isGuestMode = false;
+                localStorage.removeItem('guestMode');
+                hideModals();
+                updateAuthUi();
+                showToast('Account created successfully! Welcome!', 'success');
+            } catch (err) {
+                console.error('Signup error:', err);
+                showToast('Signup failed: ' + err.message, 'error');
+            }
+        }
+        
+        async function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+            
+            try {
+                const res = await apiPost('/auth/login', { email, password });
+                setAuthToken(res.token);
+                isGuestMode = false;
+                localStorage.removeItem('guestMode');
+                hideModals();
+                updateAuthUi();
+                showToast('Logged in successfully! Welcome back!', 'success');
+            } catch (err) {
+                console.error('Login error:', err);
+                showToast('Login failed: ' + err.message, 'error');
+            }
+        }
+        
+        function logout() {
+            setAuthToken(null);
+            isGuestMode = false;
+            localStorage.removeItem('guestMode');
+            updateAuthUi();
+            showToast('Logged out successfully', 'info');
+        }
+        
+        /* ---------- AUTH UI UPDATE ---------- */
+        async function updateAuthUi() {
+            console.log('Updating auth UI...');
+            
+            const token = getAuthToken();
+            const guestMode = localStorage.getItem('guestMode') === 'true';
+            
+            const userInfo = el('userInfo');
+            const guestInfo = el('guestInfo');
+            const authButtons = el('authButtons');
+            const userEmail = el('userEmail');
+            const saveBtn = el('saveBtn');
+            const savesCard = el('savesCard');
+            
+            // Reset all states
+            [userInfo, guestInfo, authButtons].forEach(elem => {
+                if (elem) elem.classList.add('hidden');
+            });
+            
+            if (token) {
+                try {
+                    const me = await apiGet('/auth/me', true);
+                    if (userEmail) userEmail.textContent = me.user.email;
+                    if (userInfo) userInfo.classList.remove('hidden');
+                    if (saveBtn) saveBtn.style.display = 'inline-block';
+                    if (savesCard) savesCard.style.display = 'block';
+                    isGuestMode = false;
+                    localStorage.removeItem('guestMode');
+                    fetchSaves();
+                    console.log('User authenticated:', me.user.email);
+                } catch (e) {
+                    console.warn('Token validation failed:', e);
+                    setAuthToken(null);
+                    if (authButtons) authButtons.classList.remove('hidden');
+                    if (saveBtn) saveBtn.style.display = 'none';
+                    renderSaves([]);
+                }
+            } else if (guestMode) {
+                if (guestInfo) guestInfo.classList.remove('hidden');
+                if (saveBtn) saveBtn.style.display = 'none';
+                if (savesCard) savesCard.style.display = 'none';
+                isGuestMode = true;
+                console.log('Guest mode active');
+            } else {
+                if (authButtons) authButtons.classList.remove('hidden');
+                if (saveBtn) saveBtn.style.display = 'none';
+                if (savesCard) savesCard.style.display = 'block';
+                document.getElementById('savesList').innerHTML = '<em>Please login or continue as guest to use the generator.</em>';
+            }
+        }
+        
+        /* ---------- SAVE FUNCTIONS ---------- */
+        async function saveToAccount() {
+            if (!getAuthToken()) {
+                showToast('Please login to save your numbers', 'error');
+                return;
+            }
+            
+            if (!lastResponse || !Array.isArray(lastResponse.numbers) || lastResponse.numbers.length === 0) {
+                showToast('Generate some numbers first before saving', 'error');
+                return;
+            }
+            
+            const formatEl = el('numberFormat');
+            const format = formatEl ? formatEl.value : 'decimal';
+            const name = prompt('Enter a name for this save:', `QRNG_${getFormatDisplayName(format)}_${new Date().toISOString().split('T')[0]}`);
+            if (name === null) return;
+            
+            try {
+                const payload = {
+                    name: name || `QRNG_${Date.now()}`,
+                    numbers: lastResponse.numbers,
+                    meta: {
+                        ...lastResponse,
+                        saved_format: format,
+                        saved_at: new Date().toISOString()
+                    }
+                };
+                
+                const res = await apiPost('/save', payload, true);
+                showToast(`Saved as: ${res.name}`, 'success');
+                fetchSaves();
+            } catch (err) {
+                console.error('Save failed:', err);
+                showToast('Save failed: ' + err.message, 'error');
+            }
+        }
+        
+        async function fetchSaves() {
+            const container = el('savesList');
+            if (!container) return;
+            
+            container.innerHTML = '<em>Loading saves...</em>';
+            
+            try {
+                const res = await apiGet('/saves', true);
+                renderSaves(res.items || []);
+            } catch(e) {
+                console.error('Fetch saves failed:', e);
+                container.innerHTML = '<em>Could not fetch saves</em>';
+            }
+        }
+        
+        function renderSaves(items) {
+            const container = el('savesList');
+            if (!container) return;
+            
+            if (!items || items.length === 0) { 
+                container.innerHTML = '<em>No saves yet. Generate and save some numbers!</em>'; 
+                return; 
+            }
+            
+            container.innerHTML = '';
+            
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'save-row';
+                row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);background:var(--bg);margin-bottom:8px;border-radius:8px;';
+                
+                const date = item.created_at ? new Date(item.created_at).toLocaleDateString() : '';
+                const savedFormat = item.meta?.saved_format || 'decimal';
+                
+                row.innerHTML = `
+                    <div>
+                        <strong style="font-size:16px;">${item.name || 'Unnamed Save'}</strong>
+                        <span style="background:#6b21a8;color:white;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:8px;">${getFormatDisplayName(savedFormat).toUpperCase()}</span><br>
+                        <small style="color:#666;">${item.num_items || 0} numbers • ${date}</small>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="loadSave('${item.save_id}')" 
+                                style="padding:6px 12px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                            Load
+                        </button>
+                        <button onclick="deleteSave('${item.save_id}')" 
+                                style="padding:6px 12px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                            Delete
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(row);
+            });
+        }
+        
+        async function loadSave(saveId) {
+            try {
+                const res = await apiGet(`/saves/${saveId}`, true);
+                
+                lastResponse = {
+                    numbers: res.save.numbers,
+                    stats: res.save.meta?.stats,
+                    entropy: res.save.meta?.entropy,
+                    source: res.save.meta?.source,
+                    timestamp: res.save.created_at
+                };
+                
+                const savedFormat = res.save.meta?.saved_format || 'decimal';
+                const formatEl = el('numberFormat');
+                if (formatEl) {
+                    formatEl.value = savedFormat;
+                }
+                
+                const bitsEl = el('numBits');
+                const bits = bitsEl ? parseInt(bitsEl.value) : 8;
+                
+                renderGenerationResult(lastResponse, savedFormat, bits);
+                showToast(`Save loaded successfully (${getFormatDisplayName(savedFormat)} format)!`, 'success');
+            } catch(err) {
+                console.error('Load save failed:', err);
+                showToast('Load failed: ' + (err.message || err), 'error');
+            }
+        }
+        
+        async function deleteSave(saveId) {
+            if (!confirm('Are you sure you want to delete this save?')) return;
+            
+            try {
+                await fetch(API_BASE_URL + `/saves/${saveId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                showToast('Save deleted', 'success');
+                fetchSaves();
+            } catch(err) {
+                console.error('Delete save failed:', err);
+                showToast('Delete failed: ' + (err.message || err), 'error');
+            }
+        }
+        
+        /* ---------- INITIALIZE EVERYTHING ---------- */
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing QRNG app...');
+            
+            // Check for guest mode on page load
+            if (localStorage.getItem('guestMode') === 'true') {
+                isGuestMode = true;
+            }
+            
+            // Initialize all handlers
+            initGenerateHandler();
+            initCopyBtn();
+            initDownloadJson();
+            initDownloadCsv();
+            initPingBtn();
+            initThemeToggle();
+            initAccentPicker();
+            initParticles();
+            initFormatHandler();
+            initModals();
+            
+            // Update auth UI
+            updateAuthUi();
+            
+            console.log('QRNG App initialized successfully - NO ERRORS!');
+        });
+        
+        console.log('QRNG JavaScript loaded successfully - v2.2 with complete format support');
+    </script>
+</body>
+</html>

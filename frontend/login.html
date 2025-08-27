@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Quantum RNG</title>
+    <style>
+        :root {
+            --accent: #6b21a8;
+            --bg: #000000;
+            --text: #ffffff;
+            --border: #374151;
+            --card: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .quantum-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(125deg, #000000, #0a0a2a);
+            overflow: hidden;
+        }
+
+        .quantum-particle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(138, 43, 226, 0.4));
+            box-shadow: 0 0 15px 5px rgba(138, 43, 226, 0.6);
+            opacity: 0.7;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) translateX(0);
+            }
+            25% {
+                transform: translateY(-50px) translateX(50px);
+            }
+            50% {
+                transform: translateY(-100px) translateX(-50px);
+            }
+            75% {
+                transform: translateY(-50px) translateX(-100px);
+            }
+        }
+
+        .quantum-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(138, 43, 226, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(138, 43, 226, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.3;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+        }
+
+        .login-card {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #8b5cf6, #6b21a8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(107, 33, 168, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(107, 33, 168, 0.6);
+        }
+
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .login-options a {
+            color: #8b5cf6;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .login-options a:hover {
+            color: #a78bfa;
+            text-decoration: underline;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .divider span {
+            padding: 0 15px;
+        }
+
+        .guest-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .guest-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .back-link {
+            margin-top: 30px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-link:hover {
+            color: white;
+        }
+
+        .back-link svg {
+            margin-right: 8px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="quantum-bg">
+        <div class="quantum-grid"></div>
+        <!-- Quantum particles will be added via JavaScript -->
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Quantum RNG</h1>
+        </div>
+
+        <div class="login-card">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn">Sign In</button>
+                
+                <div class="login-options">
+                    <a href="#">Forgot password?</a>
+                    <a href="./signup.html">Create account</a>
+                </div>
+                
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+                
+                <button type="button" id="guestBtn" class="btn guest-btn">Continue as Guest</button>
+            </form>
+        </div>
+        
+        <a href="intro.html" class="back-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+            </svg>
+            Back to Introduction
+        </a>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+        const TOKEN_KEY = 'qrng_token';
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.textContent = message;
+                toast.style.display = 'block';
+                setTimeout(() => {
+                    toast.style.opacity = 1;
+                }, 10);
+                setTimeout(() => {
+                    toast.style.opacity = 0;
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                    }, 500);
+                }, 3000);
+            }
+        }
+
+        function createQuantumParticles() {
+            const bg = document.querySelector('.quantum-bg');
+            const particleCount = 15;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('quantum-particle');
+
+                const size = Math.random() * 70 + 10;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+
+                const posX = Math.random() * 100;
+                const posY = Math.random() * 100;
+                particle.style.left = `${posX}%`;
+                particle.style.top = `${posY}%`;
+
+                particle.style.animationDelay = `${Math.random() * 10}s`;
+
+                bg.appendChild(particle);
+            }
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem(TOKEN_KEY, data.token);
+                    localStorage.removeItem('qrng_guest_mode');
+                    window.location.href = 'main.html';
+                } else {
+                    showToast(data.message || 'Login failed.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showToast('Failed to connect to the server.');
+            }
+        }
+
+        function handleGuestLogin() {
+            localStorage.setItem('qrng_guest_mode', 'true');
+            localStorage.removeItem(TOKEN_KEY);
+            window.location.href = 'main.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createQuantumParticles();
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('guestBtn').addEventListener('click', handleGuestLogin);
+        });
+    </script>
+</body>
+</html>
