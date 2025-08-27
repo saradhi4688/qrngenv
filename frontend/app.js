@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = 'https://qrngbackend.onrender.com';
 const TOKEN_KEY = 'qrng_token';
 let lastResponse = null;
 let isGuestMode = false;
