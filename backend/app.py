@@ -29,7 +29,7 @@ ANU_API_KEY = os.environ.get("ANU_API_KEY", "")
 MAX_BITS = 16
 MAX_SAMPLES = 5000
 
-# Set the static folder to the 'frontend' directory, which is relative to the backend folder
+# Set the static folder to the 'frontend' directory, assuming it's a sibling of the 'backend' folder
 app = Flask(__name__, static_folder='../frontend')
 app.config["DEBUG"] = True
 
@@ -315,13 +315,13 @@ def generate_local_qiskit(num_bits: int, num_samples: int):
     return numbers[:num_samples]
 
 @app.route("/")
-def serve_index():
+def serve_intro():
     return send_from_directory(app.static_folder, 'intro.html')
 
-@app.route("/frontend/<path:filename>")
-def serve_frontend_files(filename):
-    """Serve files from the 'frontend' subdirectory."""
-    return send_from_directory('frontend', filename)
+@app.route("/<path:path>")
+def serve_static_files(path):
+    """Serve any static file from the root directory."""
+    return send_from_directory(app.static_folder, path)
 
 @app.route("/favicon.ico")
 def favicon():
